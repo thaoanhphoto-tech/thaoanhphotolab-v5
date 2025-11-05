@@ -1,0 +1,10 @@
+
+{
+  "name": "TRUNG TÂM IN ẢNH KỸ THUẬT SỐ CÔNG NGHỆ MỚI  THẢO ANH PHOTO LAB(19-10)",
+  "description": "Dễ dàng tạo ảnh CMND, hộ chiếu và thị thực chính thức cho bất kỳ quốc gia nào. Tải ảnh lên, chọn phông nền và trang phục, và để AI của chúng tôi tạo ra một bức ảnh chất lượng chuyên nghiệp, tuân thủ quy định chỉ trong vài giây.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera",
+    "geolocation"
+  ]
+}
