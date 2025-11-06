@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { PhotoRestorer } from './PhotoRestorer';
 import { ProAiRelight } from './pro-ai-relight/ProAiRelight';
@@ -20,9 +21,11 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
 interface PhotoLabProps {
     currentUser: User | null;
     onPrintRequest: (imageDataUrl: string, sourceTool: string) => void;
+    // FIX: Add missing prop
+    onSinglePhotoDownloadRequest: (imageUrl: string) => void;
 }
 
-export const PhotoLab: React.FC<PhotoLabProps> = ({ currentUser, onPrintRequest }) => {
+export const PhotoLab: React.FC<PhotoLabProps> = ({ currentUser, onPrintRequest, onSinglePhotoDownloadRequest }) => {
     const [activeTool, setActiveTool] = useState<'restore' | 'relight' | 'color'>('restore');
 
     return (
@@ -34,7 +37,7 @@ export const PhotoLab: React.FC<PhotoLabProps> = ({ currentUser, onPrintRequest 
             </div>
 
             <div>
-                {activeTool === 'restore' && <PhotoRestorer currentUser={currentUser} onPrintRequest={onPrintRequest} />}
+                {activeTool === 'restore' && <PhotoRestorer currentUser={currentUser} onPrintRequest={onPrintRequest} onSinglePhotoDownloadRequest={onSinglePhotoDownloadRequest} />}
                 {activeTool === 'relight' && <ProAiRelight currentUser={currentUser} onPrintRequest={onPrintRequest} />}
                 {activeTool === 'color' && <BatchColorCorrector currentUser={currentUser} onPrintRequest={onPrintRequest} />}
             </div>

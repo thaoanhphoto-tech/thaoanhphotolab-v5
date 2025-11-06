@@ -637,6 +637,7 @@ const handleApplyAudit = (updates: { id: string; newStock: number; warehouseId: 
       case 'conceptPhoto': return <ConceptPhotoGenerator currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} />;
       case 'familyPhotoComposer': return <FamilyPhotoComposer currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} />;
       case 'socialMediaPostGenerator': return <SocialMediaPostGenerator currentUser={currentUser} />;
+      // FIX: Add onSinglePhotoDownloadRequest to PhotoLab
       case 'photoLab': return <PhotoLab currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} onSinglePhotoDownloadRequest={handleSinglePhotoDownloadRequest} />;
       case 'batchColorCorrector': return <BatchColorCorrector currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} />;
       default: 
@@ -803,6 +804,7 @@ const handleApplyAudit = (updates: { id: string; newStock: number; warehouseId: 
       case 'plan_management': return isAdmin && <PlanManagementPage navigateTo={navigateTo} plans={plans} onUpdatePlans={handleUpdatePlans} />;
       case 'product_management': return isAdmin && <ProductManagementPage products={products} onUpdateProducts={handleUpdateProducts} navigateTo={navigateTo} productBases={productBases} sizes={sizes} serviceCategories={serviceCategories} materials={materials} productBOMs={productBOMs} onUpdateProductBOMs={(b) => { saveProductBOMs(b); setProductBOMs(b);}} />;
       case 'catalog_management': return isAdmin && <CatalogManagementPage productBases={productBases} sizes={sizes} serviceCategories={serviceCategories} onUpdateProductBases={handleUpdateProductBases} onUpdateSizes={handleUpdateSizes} onUpdateServiceCategories={handleUpdateServiceCategories} navigateTo={navigateTo} />;
+      // FIX: Wrap onUpdateUser to match expected signature
       case 'my_account': return currentUser && <MyAccountPage currentUser={currentUser} rewards={rewards} vouchers={vouchers.filter(v => v.userId === currentUser.id)} products={products} onRedeemReward={handleRedeemReward} onUpdateUser={(updates) => handleUpdateSingleUser(currentUser.id, updates)} onUpdatePassword={handleUpdatePassword} />;
       case 'inventory_management': return isAdmin && currentUser && <InventoryManagementPage navigateTo={navigateTo} materials={materials} onUpdateMaterials={(m) => { saveMaterials(m); setMaterials(m); }} onApplyAudit={handleApplyAudit} currentUser={currentUser} suppliers={suppliers} onUpdateSuppliers={handleUpdateSuppliers} transactions={inventoryTransactions} onAddTransaction={handleAddInventoryTransaction} sizes={sizes} purchaseOrders={purchaseOrders} onAddPurchaseOrder={handleAddPurchaseOrder} onUpdatePurchaseOrder={handleUpdatePurchaseOrder} warehouses={warehouses} onUpdateWarehouses={handleUpdateWarehouses} warehouseTransfers={warehouseTransfers} onAddWarehouseTransfer={handleAddWarehouseTransfer} onCompleteWarehouseTransfer={handleCompleteWarehouseTransfer}/>;
       case 'time_clock': return currentUser && <TimeClockPage currentUser={currentUser} onAddTimeClockEntry={handleAddTimeClockEntry} />;

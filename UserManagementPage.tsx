@@ -81,8 +81,10 @@ interface UserManagementPageProps {
 
 // ... (Tab definition and other lazy loads)
 // Fix: Correctly lazy load the default export of ReportsPage.
+// FIX: Correct path to components/reports/ReportsPage.tsx
 const ReportsPage = lazy(() => import('./components/reports/ReportsPage'));
-const ExpenseManagementPage = lazy(() => import('./components/expenses/ExpenseManagementPage').then(module => ({ default: module.ExpenseManagementPage })));
+// FIX: Correct path to components/expenses/ExpenseManagementPage.tsx
+const ExpenseManagementPage = lazy(() => import('./components/expenses/ExpenseManagementPage'));
 
 
 // FIX: Moved helper components before they are used to prevent "Cannot find name" errors.
