@@ -54,8 +54,9 @@ const CrmPage = lazy(() => import('./crm/CrmPage'));
 const StudioSchedulePage = lazy(() => import('./schedule/StudioSchedulePage'));
 const ContractManagementPage = lazy(() => import('./contracts/ContractManagementPage'));
 // FIX: Correctly import ExpenseManagementPage instead of the non-existent FinancePage
-const ExpenseManagementPage = lazy(() => import('../../components/expenses/ExpenseManagementPage'));
-const HrManagementPage = lazy(() => import('./hr/HrManagementPage'));
+const ExpenseManagementPage = lazy(() => import('../../components/expenses/ExpenseManagementPage').then(module => ({ default: module.ExpenseManagementPage })));
+// FIX: Correctly handle named export for lazy loading HRPayrollTab.
+const HRPayrollTab = lazy(() => import('../hr/HRPayrollTab').then(module => ({ default: module.HRPayrollTab })));
 const PostProductionPage = lazy(() => import('./post-production/PostProductionPage'));
 const StudioInventoryPage = lazy(() => import('./inventory/StudioInventoryPage'));
 const MarketingPage = lazy(() => import('./marketing/MarketingPage'));
@@ -155,7 +156,7 @@ const WeddingStudioManager: React.FC<WeddingStudioManagerProps> = (props) => {
                             onAddExpense={onAddExpense}
                         />;
             case 'hr':
-                return <HrManagementPage 
+                return <HRPayrollTab 
                             users={users}
                             personnelProfiles={personnelProfiles}
                             timeClockEntries={timeClockEntries}
