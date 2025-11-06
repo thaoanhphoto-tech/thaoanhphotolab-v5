@@ -28,9 +28,14 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, navigate
 
   useEffect(() => {
     if (typeof google !== 'undefined' && google.accounts && googleButtonRef.current) {
+        // FIX: Use process.env for environment variables to resolve typing issues.
+        const clientId = process.env.VITE_GOOGLE_CLIENT_ID;
+        if (!clientId) {
+            console.error("VITE_GOOGLE_CLIENT_ID is not defined.");
+            return;
+        }
         google.accounts.id.initialize({
-            // FIX: Use process.env for environment variables.
-            client_id: process.env.GOOGLE_CLIENT_ID,
+            client_id: clientId,
             callback: (response: any) => {
                 onGoogleLogin(response.credential);
             }

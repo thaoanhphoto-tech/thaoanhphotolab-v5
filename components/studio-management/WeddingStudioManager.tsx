@@ -2,9 +2,7 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { User, StudioStaff } from '../../userStore';
 import { Loader } from '../Loader';
-// Fix: Import Customer type from its definition file.
 import type { Customer } from './crm/types';
-// Fix: Import ServicePackage and Contract types from their definition file.
 import type { ServicePackage, Contract } from './contracts/types';
 import { Expense } from '../../expenseStore';
 import { PersonnelProfile, TimeClockEntry } from '../../userStore';
@@ -53,9 +51,7 @@ interface SidebarItem {
 const CrmPage = lazy(() => import('./crm/CrmPage'));
 const StudioSchedulePage = lazy(() => import('./schedule/StudioSchedulePage'));
 const ContractManagementPage = lazy(() => import('./contracts/ContractManagementPage'));
-// FIX: Correctly import ExpenseManagementPage instead of the non-existent FinancePage
-const ExpenseManagementPage = lazy(() => import('../../components/expenses/ExpenseManagementPage').then(module => ({ default: module.ExpenseManagementPage })));
-// FIX: Correctly handle named export for lazy loading HRPayrollTab.
+const ExpenseManagementPage = lazy(() => import('../../components/expenses/ExpenseManagementPage'));
 const HRPayrollTab = lazy(() => import('../hr/HRPayrollTab').then(module => ({ default: module.HRPayrollTab })));
 const PostProductionPage = lazy(() => import('./post-production/PostProductionPage'));
 const StudioInventoryPage = lazy(() => import('./inventory/StudioInventoryPage'));
@@ -149,7 +145,6 @@ const WeddingStudioManager: React.FC<WeddingStudioManagerProps> = (props) => {
                             onUpdatePackages={onUpdatePackages}
                             onUpdateContracts={onUpdateContracts}
                         />;
-            // FIX: Use ExpenseManagementPage and pass correct props
             case 'finance':
                 return <ExpenseManagementPage
                             expenses={expenses}

@@ -9,8 +9,13 @@ import type { UploadedPortrait, FamilyMember, MemberRole } from '../components/c
 let aiInstance: GoogleGenAI | null = null;
 const getAi = (): GoogleGenAI => {
     if (!aiInstance) {
-        // FIX: Use process.env.API_KEY as per guidelines and remove existence check.
-        aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        // FIX: Use process.env.API_KEY as per the guidelines
+        const apiKey = process.env.API_KEY;
+        if (!apiKey) {
+            console.error("API_KEY is not defined in the environment.");
+            throw new Error("API key is missing.");
+        }
+        aiInstance = new GoogleGenAI({ apiKey });
     }
     return aiInstance;
 };

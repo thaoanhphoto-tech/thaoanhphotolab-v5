@@ -15,7 +15,6 @@ import { ContactFAB } from './components/ContactFAB';
 import type { Theme } from './types';
 import { PricingTable, loadPrices, savePrices } from './pricingStore';
 import { PlanDetailsTable, loadPlans, savePlans } from './planStore';
-// FIX: Import `saveVouchers`
 import { LoyaltySettings, loadLoyaltySettings, saveLoyaltySettings, Reward, getRewards, saveRewards, Voucher, getVouchers, addVoucher as addVoucherToStore, saveVouchers } from './loyaltyStore';
 import { Material, ProductBOM, getMaterials, saveMaterials, getProductBOMs, saveProductBOMs, StudioAsset, getStudioAssets, saveStudioAssets, AssetLog, addAssetLog as addInventoryAssetLog, Supplier, getSuppliers, saveSuppliers, InventoryTransaction, getInventoryTransactions, addInventoryTransaction, PurchaseOrder, getPurchaseOrders, savePurchaseOrders, addPurchaseOrder, updatePurchaseOrder, Warehouse, getWarehouses, saveWarehouses, WarehouseTransfer, getWarehouseTransfers, addWarehouseTransfer, completeWarehouseTransfer } from './inventoryStore';
 import { Expense, getExpenses, addExpense } from './expenseStore';
@@ -422,7 +421,6 @@ const AppContent: React.FC = () => {
     setMaterials(getMaterials());
   };
 
-// FIX: Add handler for onApplyAudit
 const handleApplyAudit = (updates: { id: string; newStock: number; warehouseId: string }[], notes: string, warehouseId: string) => {
     updates.forEach(update => {
         const material = materials.find(m => m.id === update.id);
@@ -546,6 +544,7 @@ const handleApplyAudit = (updates: { id: string; newStock: number; warehouseId: 
 
     let referralBonusApplied = false;
     let newUsers = [...users];
+    const isFirstUser = newUsers.length === 0;
 
     if (referredBy) {
         const referrerIndex = newUsers.findIndex(u => u.referralCode.toUpperCase() === referredBy.toUpperCase());
@@ -566,7 +565,8 @@ const handleApplyAudit = (updates: { id: string; newStock: number; warehouseId: 
         fullName,
         zalo,
         email,
-        purchasedPlans: ['free'],
+        purchasedPlans: isFirstUser ? ['admin'] : ['free'],
+        operationalRole: isFirstUser ? 'tong_giam_doc' : null,
         permissionOverrides: {},
         points: referralBonusApplied ? loyaltySettings.referralBonusPoints : 0,
         referralCode: generateReferralCode(),
@@ -575,6 +575,23 @@ const handleApplyAudit = (updates: { id: string; newStock: number; warehouseId: 
     };
 
     newUsers.push(newUser);
+
+    if (isFirstUser) {
+        const paymentScreenUser: User = {
+            id: 'system-payment-screen',
+            username: 'manhinhthanhtoan',
+            password: '123456',
+            fullName: 'Màn hình Thanh toán',
+            zalo: '0000000000',
+            purchasedPlans: ['free'],
+            permissionOverrides: {},
+            points: 0,
+            referralCode: 'SYSTEM',
+            createdAt: Date.now(),
+        };
+        newUsers.push(paymentScreenUser);
+    }
+
     handleUpdateUsers(newUsers);
     
     return { success: true, message: 'Đăng ký thành công! Bạn sẽ được chuyển đến trang đăng nhập.' };
@@ -637,7 +654,6 @@ const handleApplyAudit = (updates: { id: string; newStock: number; warehouseId: 
       case 'conceptPhoto': return <ConceptPhotoGenerator currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} />;
       case 'familyPhotoComposer': return <FamilyPhotoComposer currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} />;
       case 'socialMediaPostGenerator': return <SocialMediaPostGenerator currentUser={currentUser} />;
-      // FIX: Add onSinglePhotoDownloadRequest to PhotoLab
       case 'photoLab': return <PhotoLab currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} onSinglePhotoDownloadRequest={handleSinglePhotoDownloadRequest} />;
       case 'batchColorCorrector': return <BatchColorCorrector currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} />;
       default: 
@@ -804,7 +820,6 @@ const handleApplyAudit = (updates: { id: string; newStock: number; warehouseId: 
       case 'plan_management': return isAdmin && <PlanManagementPage navigateTo={navigateTo} plans={plans} onUpdatePlans={handleUpdatePlans} />;
       case 'product_management': return isAdmin && <ProductManagementPage products={products} onUpdateProducts={handleUpdateProducts} navigateTo={navigateTo} productBases={productBases} sizes={sizes} serviceCategories={serviceCategories} materials={materials} productBOMs={productBOMs} onUpdateProductBOMs={(b) => { saveProductBOMs(b); setProductBOMs(b);}} />;
       case 'catalog_management': return isAdmin && <CatalogManagementPage productBases={productBases} sizes={sizes} serviceCategories={serviceCategories} onUpdateProductBases={handleUpdateProductBases} onUpdateSizes={handleUpdateSizes} onUpdateServiceCategories={handleUpdateServiceCategories} navigateTo={navigateTo} />;
-      // FIX: Wrap onUpdateUser to match expected signature
       case 'my_account': return currentUser && <MyAccountPage currentUser={currentUser} rewards={rewards} vouchers={vouchers.filter(v => v.userId === currentUser.id)} products={products} onRedeemReward={handleRedeemReward} onUpdateUser={(updates) => handleUpdateSingleUser(currentUser.id, updates)} onUpdatePassword={handleUpdatePassword} />;
       case 'inventory_management': return isAdmin && currentUser && <InventoryManagementPage navigateTo={navigateTo} materials={materials} onUpdateMaterials={(m) => { saveMaterials(m); setMaterials(m); }} onApplyAudit={handleApplyAudit} currentUser={currentUser} suppliers={suppliers} onUpdateSuppliers={handleUpdateSuppliers} transactions={inventoryTransactions} onAddTransaction={handleAddInventoryTransaction} sizes={sizes} purchaseOrders={purchaseOrders} onAddPurchaseOrder={handleAddPurchaseOrder} onUpdatePurchaseOrder={handleUpdatePurchaseOrder} warehouses={warehouses} onUpdateWarehouses={handleUpdateWarehouses} warehouseTransfers={warehouseTransfers} onAddWarehouseTransfer={handleAddWarehouseTransfer} onCompleteWarehouseTransfer={handleCompleteWarehouseTransfer}/>;
       case 'time_clock': return currentUser && <TimeClockPage currentUser={currentUser} onAddTimeClockEntry={handleAddTimeClockEntry} />;

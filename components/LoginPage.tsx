@@ -65,9 +65,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, navigateTo, onGoo
 
   useEffect(() => {
     if (typeof google !== 'undefined' && google.accounts && googleButtonRef.current) {
+        // FIX: Use process.env for environment variables to resolve typing issues.
+        const clientId = process.env.VITE_GOOGLE_CLIENT_ID;
+        if (!clientId) {
+            console.error("VITE_GOOGLE_CLIENT_ID is not defined.");
+            return;
+        }
         google.accounts.id.initialize({
-            // FIX: Use process.env for environment variables.
-            client_id: process.env.GOOGLE_CLIENT_ID,
+            client_id: clientId,
             callback: (response: any) => {
                 onGoogleLogin(response.credential);
             }
@@ -156,6 +161,29 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, navigateTo, onGoo
     }
   };
   
+  const handleAdminRecovery = () => {
+    const allUsers = getUsers(); // Get a fresh copy from storage
+    const adminUserIndex = allUsers.findIndex(u => u.purchasedPlans.includes('admin'));
+
+    if (adminUserIndex === -1) {
+      alert('Lỗi: Không tìm thấy tài khoản admin trong hệ thống.');
+      return;
+    }
+
+    const adminUser = allUsers[adminUserIndex];
+    const defaultPassword = '123456';
+
+    // Update the user's password in the array
+    allUsers[adminUserIndex] = { ...adminUser, password: defaultPassword };
+
+    // Save the entire updated array back to localStorage
+    saveUsers(allUsers);
+
+    // Inform the user
+    alert(
+      `Đã khôi phục tài khoản Admin!\n\nTên đăng nhập: ${adminUser.username}\nMật khẩu mới: ${defaultPassword}\n\nVui lòng đăng nhập và đổi mật khẩu ngay.`
+    );
+  };
 
   return (
     <div className="flex items-center justify-center min-h-[70vh] bg-emerald-50 dark:bg-emerald-950 px-4">
@@ -233,6 +261,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, navigateTo, onGoo
             Đăng ký ngay
           </button>
         </p>
+        <div className="text-center mt-4 border-t border-slate-200 dark:border-zinc-700 pt-4">
+            <button
+                type="button"
+                onClick={handleAdminRecovery}
+                className="text-xs text-amber-600 hover:underline"
+            >
+                Khôi phục tài khoản Admin (Tạm thời)
+            </button>
+        </div>
       </div>
 
       {isFaceLoginOpen && (

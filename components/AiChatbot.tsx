@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-// Fix: Renamed imported `Blob` to `GenAiBlob` to avoid conflict with the native DOM `Blob` type.
 import { GoogleGenAI, Chat, Modality, Blob as GenAiBlob, LiveServerMessage } from "@google/genai";
 import { AiAssistantIcon } from './icons/AiAssistantIcon';
 import { XIcon } from './icons/XIcon';
@@ -90,7 +89,6 @@ export const AiChatbot: React.FC<AiChatbotProps> = ({ onClose, isInitialLogin, c
 
   // Voice chat state and refs
   const [isListening, setIsListening] = useState(false);
-  // Fix: The 'LiveSession' type is not exported from '@google/genai'. Using 'any' as a fallback.
   const sessionPromiseRef = useRef<Promise<any> | null>(null);
   const inputAudioContextRef = useRef<AudioContext | null>(null);
   const outputAudioContextRef = useRef<AudioContext | null>(null);
@@ -103,7 +101,6 @@ export const AiChatbot: React.FC<AiChatbotProps> = ({ onClose, isInitialLogin, c
   const outputTranscriptionRef = useRef('');
   const aiRef = useRef<GoogleGenAI | null>(null);
 
-  // Fix: Moved stopListening function before its usage in useEffect cleanup.
   const stopListening = useCallback(() => {
     micStreamRef.current?.getTracks().forEach(track => track.stop());
     scriptProcessorRef.current?.disconnect();
@@ -135,8 +132,14 @@ export const AiChatbot: React.FC<AiChatbotProps> = ({ onClose, isInitialLogin, c
 
   useEffect(() => {
     try {
-        // FIX: Use process.env.API_KEY as per guidelines and remove existence check.
-        aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        // FIX: Use process.env.API_KEY as per the guidelines
+        const apiKey = process.env.API_KEY;
+        if (!apiKey) {
+            console.error("API_KEY is not defined in the environment.");
+            showToast("Trợ lý AI chưa sẵn sàng.", 'error');
+            return;
+        }
+        aiRef.current = new GoogleGenAI({ apiKey });
         const newChat = aiRef.current.chats.create({
             model: 'gemini-2.5-flash',
             config: {
@@ -175,9 +178,7 @@ export const AiChatbot: React.FC<AiChatbotProps> = ({ onClose, isInitialLogin, c
       micStreamRef.current = stream;
       setIsListening(true);
       
-      // FIX: Add `as any` to `window` to support `webkitAudioContext` in all TypeScript environments.
       inputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-      // FIX: Add `as any` to `window` to support `webkitAudioContext` in all TypeScript environments.
       outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       nextStartTimeRef.current = 0;
       outputSourcesRef.current.clear();
