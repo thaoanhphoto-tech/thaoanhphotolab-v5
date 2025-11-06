@@ -135,7 +135,7 @@ export const AiChatbot: React.FC<AiChatbotProps> = ({ onClose, isInitialLogin, c
 
   useEffect(() => {
     try {
-        // Fix: Use the correct 'API_KEY' environment variable as required by the execution environment.
+        // FIX: Use process.env.API_KEY as per guidelines and remove existence check.
         aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const newChat = aiRef.current.chats.create({
             model: 'gemini-2.5-flash',

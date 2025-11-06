@@ -9,9 +9,7 @@ import type { UploadedPortrait, FamilyMember, MemberRole } from '../components/c
 let aiInstance: GoogleGenAI | null = null;
 const getAi = (): GoogleGenAI => {
     if (!aiInstance) {
-        if (!process.env.API_KEY) {
-            throw new Error("Gemini API Key not found. Please set the API_KEY environment variable.");
-        }
+        // FIX: Use process.env.API_KEY as per guidelines and remove existence check.
         aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY });
     }
     return aiInstance;

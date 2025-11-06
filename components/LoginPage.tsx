@@ -2,7 +2,7 @@
 declare const google: any;
 
 import React, { useState, useEffect, useRef } from 'react';
-import { User } from '../userStore';
+import { User, getUsers, saveUsers } from '../userStore';
 import type { PageState } from '../App';
 import { EyeIcon } from './icons/EyeIcon';
 import { EyeOffIcon } from './icons/EyeOffIcon';
@@ -66,7 +66,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, navigateTo, onGoo
   useEffect(() => {
     if (typeof google !== 'undefined' && google.accounts && googleButtonRef.current) {
         google.accounts.id.initialize({
-            client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+            // FIX: Use process.env for environment variables.
+            client_id: process.env.GOOGLE_CLIENT_ID,
             callback: (response: any) => {
                 onGoogleLogin(response.credential);
             }
@@ -154,7 +155,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, navigateTo, onGoo
         setForgotError('Không tìm thấy tài khoản nào được liên kết với số Zalo này.');
     }
   };
-
+  
 
   return (
     <div className="flex items-center justify-center min-h-[70vh] bg-emerald-50 dark:bg-emerald-950 px-4">

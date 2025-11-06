@@ -29,7 +29,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, navigate
   useEffect(() => {
     if (typeof google !== 'undefined' && google.accounts && googleButtonRef.current) {
         google.accounts.id.initialize({
-            client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+            // FIX: Use process.env for environment variables.
+            client_id: process.env.GOOGLE_CLIENT_ID,
             callback: (response: any) => {
                 onGoogleLogin(response.credential);
             }
