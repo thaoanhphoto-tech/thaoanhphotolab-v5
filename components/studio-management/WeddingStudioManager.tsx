@@ -1,3 +1,4 @@
+
 import React, { useState, lazy, Suspense } from 'react';
 import { User, StudioStaff } from '../../userStore';
 import { Loader } from '../Loader';
@@ -52,7 +53,7 @@ interface SidebarItem {
 const CrmPage = lazy(() => import('./crm/CrmPage'));
 const StudioSchedulePage = lazy(() => import('./schedule/StudioSchedulePage'));
 const ContractManagementPage = lazy(() => import('./contracts/ContractManagementPage'));
-const FinancePage = lazy(() => import('./finance/FinancePage'));
+const FinancePage = lazy(() => import('../expenses/ExpenseManagementPage'));
 const HrManagementPage = lazy(() => import('./hr/HrManagementPage'));
 const PostProductionPage = lazy(() => import('./post-production/PostProductionPage'));
 const StudioInventoryPage = lazy(() => import('./inventory/StudioInventoryPage'));
@@ -148,9 +149,7 @@ const WeddingStudioManager: React.FC<WeddingStudioManagerProps> = (props) => {
                         />;
             case 'finance':
                 return <FinancePage
-                            contracts={contracts}
                             expenses={expenses}
-                            onAddPayment={onAddPayment}
                             onAddExpense={onAddExpense}
                         />;
             case 'hr':

@@ -1,64 +1,34 @@
 
-
 import React, { useState, lazy, Suspense, useEffect, useRef } from 'react';
-// Fix: Adjust import path for a root-level file
 import { User, PlanId, ALL_TOOLS, TOOL_NAMES, hasPermission, BankAccount, getPendingBill, OperationalRole, OPERATIONAL_ROLE_NAMES, PersonnelProfile, BANKS, TimeClockEntry, PrintRequest } from './userStore';
-// Fix: Adjust import path for a root-level file
 import { useToast } from './components/Toast';
-// Fix: Adjust import path for a root-level file
 import { XIcon } from './components/icons/XIcon';
-// Fix: Adjust import path for a root-level file
 import { EyeIcon } from './components/icons/EyeIcon';
-// Fix: Adjust import path for a root-level file
 import { EyeOffIcon } from './components/icons/EyeOffIcon';
-// Fix: Adjust import path for a root-level file
 import { StarIcon } from './components/icons/StarIcon';
-// Fix: Adjust import path for a root-level file
 import { PageState } from './App';
-// Fix: Adjust import path for a root-level file
 import { IdCardIcon } from './components/icons/IdCardIcon';
-// Fix: Adjust import path for a root-level file
 import { HomeIcon } from './components/icons/HomeIcon';
-// Fix: Adjust import path for a root-level file
 import { UploadIcon } from './components/icons/UploadIcon';
-// Fix: Adjust import path for a root-level file
 import { CameraIcon } from './components/icons/CameraIcon';
-// Fix: Adjust import path for a root-level file
 import { LoyaltyProgramPage } from './components/loyalty/LoyaltyProgramPage';
-// Fix: Adjust import path for a root-level file
 import { LoyaltySettings, Reward } from './loyaltyStore';
-// Fix: Adjust import path for a root-level file
 import { Product } from './productStore';
-// Fix: Adjust import path for a root-level file
 import { InventoryManagementPage } from './components/InventoryManagementPage';
-// Fix: Adjust import path for a root-level file
 import { Material, ProductBOM, Supplier, InventoryTransaction, PurchaseOrder, Warehouse, WarehouseTransfer } from './inventoryStore';
-// Fix: Adjust import path for a root-level file
 import { HRPayrollTab } from './components/hr/HRPayrollTab';
-// Fix: Adjust import path for a root-level file
 import { TrashIcon } from './components/icons/TrashIcon';
-// Fix: Adjust import path for a root-level file
 import { UsersIcon } from './components/icons/UsersIcon';
-// Fix: Adjust import path for a root-level file
 import { BanknotesIcon } from './components/icons/BanknotesIcon';
-// Fix: Adjust import path for a root-level file
 import { TrophyIcon } from './components/icons/TrophyIcon';
-// Fix: Adjust import path for a root-level file
 import { ArchiveBoxIcon } from './components/icons/ArchiveBoxIcon';
-// Fix: Adjust import path for a root-level file
 import { DocumentTextIcon } from './components/icons/DocumentTextIcon';
-// Fix: Adjust import path for a root-level file
 import { Loader } from './components/Loader';
-// Fix: Adjust import path for a root-level file
 import { Expense } from './expenseStore';
-// Fix: Adjust import path for a root-level file
 import { OfficeBuildingIcon } from './components/icons/OfficeBuildingIcon';
 // FIX: Import PlanDetail to correctly type plan details when iterating.
-// Fix: Adjust import path for a root-level file and add PlanDetail
 import { loadPlans, PlanDetailsTable, PlanDetail } from './planStore';
-// Fix: Adjust import path for a root-level file
 import IconLibraryModal from './components/IconLibraryModal';
-// Fix: Adjust import path for a root-level file
 import { IconID, CustomIconSettings, loadIconSettings, saveIconSettings, getIconOptionsForType } from './iconStore';
 
 // ... (rest of the imports are assumed to be correct)
@@ -105,17 +75,17 @@ interface UserManagementPageProps {
   warehouseTransfers: WarehouseTransfer[];
   onAddWarehouseTransfer: (transferData: Omit<WarehouseTransfer, 'id' | 'timestamp' | 'status'>) => void;
   onCompleteWarehouseTransfer: (transferId: string) => void;
-  // FIX: Add missing prop
+  // FIX: Add missing onApplyAudit prop to satisfy InventoryManagementPageProps
   onApplyAudit: (updatedMaterials: { id: string; newStock: number; warehouseId: string }[], notes: string, warehouseId: string) => void;
 }
 
 // ... (Tab definition and other lazy loads)
-// FIX: Correct lazy loading for default exports. This was causing a build error on Vercel.
+// Fix: Correctly lazy load the default export of ReportsPage.
 const ReportsPage = lazy(() => import('./components/reports/ReportsPage'));
-const ExpenseManagementPage = lazy(() => import('./components/expenses/ExpenseManagementPage'));
+const ExpenseManagementPage = lazy(() => import('./components/expenses/ExpenseManagementPage').then(module => ({ default: module.ExpenseManagementPage })));
 
 
-// Fix: Moved helper components before they are used to prevent "Cannot find name" errors.
+// FIX: Moved helper components before they are used to prevent "Cannot find name" errors.
 const TabButton: React.FC<{ name: string, icon: React.ReactNode, isActive: boolean, onClick: () => void }> = ({ name, icon, isActive, onClick }) => (
     <button onClick={onClick} className={`px-4 py-3 text-sm font-semibold transition-colors flex-shrink-0 flex items-center ${isActive ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200'}`}>
         {icon} {name}

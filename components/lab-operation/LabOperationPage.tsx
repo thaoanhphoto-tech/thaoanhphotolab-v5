@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { PrintRequest, User, PrintWorkflowStatus, OperationalRole, BankAccount } from '../../userStore';
 import { PageState } from '../../App';
-// Fix: Correct import path casing for KanbanColumn.
-import { KanbanColumn } from './KanbanColumn';
+// FIX: Correct import path casing for KanbanColumn.
+import { KanbanColumn } from './kanbanColumn';
 import { ArrowLeftIcon } from '../icons/ArrowLeftIcon';
 import { AccountingPage } from './AccountingPage';
 import { PricingTable } from '../../pricingStore';
