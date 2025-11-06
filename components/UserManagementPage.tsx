@@ -1,65 +1,35 @@
 
-
 import React, { useState, lazy, Suspense, useEffect, useRef } from 'react';
-// Fix: Adjust import path for a root-level file
-import { User, PlanId, ALL_TOOLS, TOOL_NAMES, hasPermission, BankAccount, getPendingBill, OperationalRole, OPERATIONAL_ROLE_NAMES, PersonnelProfile, BANKS, TimeClockEntry, PrintRequest } from './userStore';
-// Fix: Adjust import path for a root-level file
-import { useToast } from './components/Toast';
-// Fix: Adjust import path for a root-level file
-import { XIcon } from './components/icons/XIcon';
-// Fix: Adjust import path for a root-level file
-import { EyeIcon } from './components/icons/EyeIcon';
-// Fix: Adjust import path for a root-level file
-import { EyeOffIcon } from './components/icons/EyeOffIcon';
-// Fix: Adjust import path for a root-level file
-import { StarIcon } from './components/icons/StarIcon';
-// Fix: Adjust import path for a root-level file
-import { PageState } from './App';
-// Fix: Adjust import path for a root-level file
-import { IdCardIcon } from './components/icons/IdCardIcon';
-// Fix: Adjust import path for a root-level file
-import { HomeIcon } from './components/icons/HomeIcon';
-// Fix: Adjust import path for a root-level file
-import { UploadIcon } from './components/icons/UploadIcon';
-// Fix: Adjust import path for a root-level file
-import { CameraIcon } from './components/icons/CameraIcon';
-// Fix: Adjust import path for a root-level file
-import { LoyaltyProgramPage } from './components/loyalty/LoyaltyProgramPage';
-// Fix: Adjust import path for a root-level file
-import { LoyaltySettings, Reward } from './loyaltyStore';
-// Fix: Adjust import path for a root-level file
-import { Product } from './productStore';
-// Fix: Adjust import path for a root-level file
-import { InventoryManagementPage } from './components/InventoryManagementPage';
-// Fix: Adjust import path for a root-level file
-import { Material, ProductBOM, Supplier, InventoryTransaction, PurchaseOrder, Warehouse, WarehouseTransfer } from './inventoryStore';
-// Fix: Adjust import path for a root-level file
-import { HRPayrollTab } from './components/hr/HRPayrollTab';
-// Fix: Adjust import path for a root-level file
-import { TrashIcon } from './components/icons/TrashIcon';
-// Fix: Adjust import path for a root-level file
-import { UsersIcon } from './components/icons/UsersIcon';
-// Fix: Adjust import path for a root-level file
-import { BanknotesIcon } from './components/icons/BanknotesIcon';
-// Fix: Adjust import path for a root-level file
-import { TrophyIcon } from './components/icons/TrophyIcon';
-// Fix: Adjust import path for a root-level file
-import { ArchiveBoxIcon } from './components/icons/ArchiveBoxIcon';
-// Fix: Adjust import path for a root-level file
-import { DocumentTextIcon } from './components/icons/DocumentTextIcon';
-// Fix: Adjust import path for a root-level file
-import { Loader } from './components/Loader';
-// Fix: Adjust import path for a root-level file
-import { Expense } from './expenseStore';
-// Fix: Adjust import path for a root-level file
-import { OfficeBuildingIcon } from './components/icons/OfficeBuildingIcon';
+import { User, PlanId, ALL_TOOLS, TOOL_NAMES, hasPermission, BankAccount, getPendingBill, OperationalRole, OPERATIONAL_ROLE_NAMES, PersonnelProfile, BANKS, TimeClockEntry, PrintRequest } from '../userStore';
+import { useToast } from './Toast';
+import { XIcon } from './icons/XIcon';
+import { EyeIcon } from './icons/EyeIcon';
+import { EyeOffIcon } from './icons/EyeOffIcon';
+import { StarIcon } from './icons/StarIcon';
+import { PageState } from '../App';
+import { IdCardIcon } from './icons/IdCardIcon';
+import { HomeIcon } from './icons/HomeIcon';
+import { UploadIcon } from './icons/UploadIcon';
+import { CameraIcon } from './icons/CameraIcon';
+import { LoyaltyProgramPage } from './loyalty/LoyaltyProgramPage';
+import { LoyaltySettings, Reward } from '../loyaltyStore';
+import { Product } from '../productStore';
+import { InventoryManagementPage } from './InventoryManagementPage';
+import { Material, ProductBOM, Supplier, InventoryTransaction, PurchaseOrder, Warehouse, WarehouseTransfer } from '../inventoryStore';
+import { HRPayrollTab } from './hr/HRPayrollTab';
+import { TrashIcon } from './icons/TrashIcon';
+import { UsersIcon } from './icons/UsersIcon';
+import { BanknotesIcon } from './icons/BanknotesIcon';
+import { TrophyIcon } from './icons/TrophyIcon';
+import { ArchiveBoxIcon } from './icons/ArchiveBoxIcon';
+import { DocumentTextIcon } from './icons/DocumentTextIcon';
+import { Loader } from './Loader';
+import { Expense } from '../expenseStore';
+import { OfficeBuildingIcon } from './icons/OfficeBuildingIcon';
 // FIX: Import PlanDetail to correctly type plan details when iterating.
-// Fix: Adjust import path for a root-level file and add PlanDetail
-import { loadPlans, PlanDetailsTable, PlanDetail } from './planStore';
-// Fix: Adjust import path for a root-level file
-import IconLibraryModal from './components/IconLibraryModal';
-// Fix: Adjust import path for a root-level file
-import { IconID, CustomIconSettings, loadIconSettings, saveIconSettings, getIconOptionsForType } from './iconStore';
+import { loadPlans, PlanDetailsTable, PlanDetail } from '../planStore';
+import IconLibraryModal from './IconLibraryModal';
+import { IconID, CustomIconSettings, loadIconSettings, saveIconSettings, getIconOptionsForType } from '../iconStore';
 
 // ... (rest of the imports are assumed to be correct)
 
@@ -105,14 +75,14 @@ interface UserManagementPageProps {
   warehouseTransfers: WarehouseTransfer[];
   onAddWarehouseTransfer: (transferData: Omit<WarehouseTransfer, 'id' | 'timestamp' | 'status'>) => void;
   onCompleteWarehouseTransfer: (transferId: string) => void;
-  // FIX: Add missing prop
+  // FIX: Add missing onApplyAudit prop to satisfy InventoryManagementPageProps
   onApplyAudit: (updatedMaterials: { id: string; newStock: number; warehouseId: string }[], notes: string, warehouseId: string) => void;
 }
 
 // ... (Tab definition and other lazy loads)
 // Fix: Correctly lazy load the default export of ReportsPage.
-const ReportsPage = lazy(() => import('./components/reports/ReportsPage'));
-const ExpenseManagementPage = lazy(() => import('./components/expenses/ExpenseManagementPage').then(module => ({ default: module.ExpenseManagementPage })));
+const ReportsPage = lazy(() => import('./reports/ReportsPage'));
+const ExpenseManagementPage = lazy(() => import('./expenses/ExpenseManagementPage').then(module => ({ default: module.ExpenseManagementPage })));
 
 
 // Fix: Moved helper components before they are used to prevent "Cannot find name" errors.

@@ -110,9 +110,9 @@ interface UserManagementPageProps {
 }
 
 // ... (Tab definition and other lazy loads)
-// Fix: Correctly lazy load the default export of ReportsPage.
+// FIX: Correct lazy loading for default exports. This was causing a build error on Vercel.
 const ReportsPage = lazy(() => import('./components/reports/ReportsPage'));
-const ExpenseManagementPage = lazy(() => import('./components/expenses/ExpenseManagementPage').then(module => ({ default: module.ExpenseManagementPage })));
+const ExpenseManagementPage = lazy(() => import('./components/expenses/ExpenseManagementPage'));
 
 
 // Fix: Moved helper components before they are used to prevent "Cannot find name" errors.
