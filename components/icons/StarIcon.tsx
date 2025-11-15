@@ -1,7 +1,13 @@
 
+
+
+
+
+
+
 import React from 'react';
 
-// Fix: Explicitly define a title prop and render a <title> element for accessibility.
+// FIX: Explicitly define a title prop and render a <title> element for accessibility.
 // This also fixes the TypeScript error when passing a title prop.
 export const StarIcon: React.FC<React.SVGProps<SVGSVGElement> & { title?: string }> = ({ title, ...props }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}>

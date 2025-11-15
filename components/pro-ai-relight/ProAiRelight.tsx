@@ -1,3 +1,6 @@
+
+
+
 import React, { useState, useEffect, useCallback } from 'react';
 import type { RelightSettings, Language, PostProcessingSettings } from './types';
 import { locales } from './locales';
@@ -100,6 +103,7 @@ export const ProAiRelight: React.FC<ProAiRelightProps> = ({ currentUser, onPrint
         <ControlPanel
           settings={settings}
           setSettings={setSettings}
+          // FIX: Cannot find name 'onImageUpload'. Did you mean 'handleImageUpload'?
           onImageUpload={handleImageUpload}
           onRelight={handleRelight}
           isRelighting={isRelighting}
@@ -107,6 +111,7 @@ export const ProAiRelight: React.FC<ProAiRelightProps> = ({ currentUser, onPrint
           language={language}
           setLanguage={setLanguage}
           t={t.controls}
+          originalImageUrl={originalImageUrl}
         />
       </div>
       <div className="lg:col-span-2">
@@ -114,6 +119,7 @@ export const ProAiRelight: React.FC<ProAiRelightProps> = ({ currentUser, onPrint
           currentUser={currentUser}
           originalImageUrl={originalImageUrl}
           generatedImageUrl={generatedImageUrl}
+          originalFilename={uploadedImage?.name}
           isRelighting={isRelighting}
           loadingMessage={loadingMessage}
           error={error}

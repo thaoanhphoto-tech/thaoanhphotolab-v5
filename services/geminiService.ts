@@ -133,6 +133,7 @@ Cung cấp kết quả dưới dạng một đối tượng JSON duy nhất.
   });
 
   try {
+// FIX: The response from the Gemini API should be accessed with response.text, not response.text().
     const jsonString = response.text.trim();
     // Gemini may wrap the JSON in markdown, so we need to strip it
     const cleanedJsonString = jsonString.replace(/^```json\s*|```\s*$/g, '');

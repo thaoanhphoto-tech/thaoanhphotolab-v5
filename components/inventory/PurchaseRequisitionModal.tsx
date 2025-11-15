@@ -8,7 +8,6 @@
 
 
 
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Material, Supplier, InventoryTransaction, PurchaseOrder } from '../../inventoryStore';
 import { XIcon } from '../icons/XIcon';

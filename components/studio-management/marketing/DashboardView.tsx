@@ -1,4 +1,8 @@
 
+
+
+
+
 import React, { useMemo } from 'react';
 import { Customer } from '../crm/types';
 
@@ -47,7 +51,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ customers }) => {
 
         return Object.entries(sourceMap)
             .map(([name, value]) => ({ name, value }))
-            // Fix: Explicitly cast chart data values to Number before sorting.
+            // FIX: Explicitly cast chart data values to Number before sorting.
             .sort((a, b) => Number(b.value) - Number(a.value));
 
     }, [customers]);
