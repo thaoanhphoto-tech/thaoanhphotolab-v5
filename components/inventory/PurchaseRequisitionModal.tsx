@@ -1,5 +1,14 @@
 
 
+
+
+
+
+
+
+
+
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Material, Supplier, InventoryTransaction, PurchaseOrder } from '../../inventoryStore';
 import { XIcon } from '../icons/XIcon';
@@ -51,7 +60,7 @@ const PurchaseRequisitionModal: React.FC<PurchaseRequisitionModalProps> = ({ mat
             const existingItemIndex = prevItems.findIndex(item => item.material.id === manualMaterialId);
             if (existingItemIndex > -1) {
                 const newItems = [...prevItems];
-                // Fix: Explicitly cast `orderQuantity` to Number to avoid TypeScript error with `+=` operator.
+                // FIX: Explicitly cast to Number to prevent type error.
                 newItems[existingItemIndex].orderQuantity = Number(newItems[existingItemIndex].orderQuantity) + manualQuantity;
                 newItems[existingItemIndex].selected = true;
                 return newItems;
@@ -84,6 +93,7 @@ const PurchaseRequisitionModal: React.FC<PurchaseRequisitionModalProps> = ({ mat
         if (selectedItems.length === 0) return '';
         let text = `YÊU CẦU MUA HÀNG - HĐ: ${invoiceNumber || '(Chưa có)'}\nNCC: ${suppliers.find(s=>s.id === supplierId)?.name || 'Chưa chọn'}\n\n`;
         selectedItems.forEach(item => {
+            // FIX: Operator '+' cannot be applied to types 'unknown' and 'number'. Cast `val` to Number.
             const totalStock = Object.values(item.material.stock || {}).reduce((sum, val) => sum + Number(val), 0);
             text += `- ${item.material.name}: Cần nhập ${item.orderQuantity} ${item.material.unit}. (Tồn: ${totalStock})\n`;
         });
@@ -112,11 +122,10 @@ const PurchaseRequisitionModal: React.FC<PurchaseRequisitionModalProps> = ({ mat
             return;
         }
         
-        // Fix: Add explicit type `: number` to the accumulator `sum` to ensure correct type inference.
-        const totalAmount = selectedItems.reduce((sum: number, item) => {
+        const totalAmount = selectedItems.reduce((sum, item) => {
             const price = item.material.unitPrice;
             const taxMultiplier = 1 + (item.taxRate / 100);
-            return sum + (item.orderQuantity * price * taxMultiplier);
+            return sum + (Number(item.orderQuantity) * price * taxMultiplier);
         }, 0);
 
         onSave({
@@ -200,6 +209,7 @@ const PurchaseRequisitionModal: React.FC<PurchaseRequisitionModalProps> = ({ mat
                             </thead>
                             <tbody>
                                 {items.map(item => {
+                                    // FIX: Operator '+' cannot be applied to types 'unknown' and 'number'. Cast `val` to Number.
                                     const totalStock = Object.values(item.material.stock || {}).reduce((sum, val) => sum + Number(val), 0);
                                     return (
                                         <tr key={item.material.id} className="border-b dark:border-zinc-700">

@@ -1,21 +1,16 @@
 
 import { GoogleGenAI, Modality, Type, GenerateContentResponse } from "@google/genai";
-import type { ImageAnalysisResult, Gender } from "../types";
-import type { RelightSettings, Quality, UpscaleQuality } from '../components/pro-ai-relight/types';
-import type { UploadedPortrait, FamilyMember, MemberRole } from '../components/concept-photo/types';
+import type { ImageAnalysisResult, Gender, RetouchSettings } from "../types.ts";
+import type { RelightSettings, Quality, UpscaleQuality } from '../components/pro-ai-relight/types.ts';
+import type { UploadedPortrait, FamilyMember, MemberRole } from '../components/concept-photo/types.ts';
 
 
 // Lazy initialization for the GoogleGenAI client to prevent errors on module load.
 let aiInstance: GoogleGenAI | null = null;
 const getAi = (): GoogleGenAI => {
     if (!aiInstance) {
-        // FIX: Use process.env.API_KEY as per the guidelines
-        const apiKey = process.env.API_KEY;
-        if (!apiKey) {
-            console.error("API_KEY is not defined in the environment.");
-            throw new Error("API key is missing.");
-        }
-        aiInstance = new GoogleGenAI({ apiKey });
+        // Initialize GoogleGenAI with a named apiKey parameter.
+        aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY });
     }
     return aiInstance;
 };
@@ -159,6 +154,41 @@ Cung cấp kết quả dưới dạng một đối tượng JSON duy nhất.
   }
 }
 
+export async function analyzePaymentBill(imageFile: File): Promise<{ amount: number | null }> {
+  const ai = getAi();
+  const imagePart = await fileToGenerativePart(imageFile);
+  const prompt = `You are a financial data extraction bot. Analyze the provided image of a bank transaction receipt. Extract only the final transaction amount. The amount is in VND. Return a JSON object with a single key 'amount' containing the numerical value of the transaction. If you cannot determine the amount, return null for the amount.`;
+  
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: { parts: [imagePart, { text: prompt }] },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            amount: { 
+              type: Type.NUMBER, 
+              description: "The transaction amount as a number." 
+            },
+          },
+        },
+      },
+    });
+
+    const jsonString = response.text.trim();
+    const cleanedJsonString = jsonString.replace(/^```json\s*|```\s*$/g, '');
+    const parsed = JSON.parse(cleanedJsonString);
+    
+    return { amount: parsed.amount ?? null };
+
+  } catch (e) {
+    console.error("Failed to parse payment bill JSON:", e);
+    return { amount: null };
+  }
+}
+
 export async function analyzeInvoiceForStockIn(imageFile: File): Promise<any> {
     const ai = getAi();
     const imagePart = await fileToGenerativePart(imageFile);
@@ -218,7 +248,8 @@ export async function generateIdPhoto(
   retouch: string,
   lighting: string,
   expression: string,
-  customPrompt: string
+  customPrompt: string,
+  proRetouchSettings: { [key: string]: boolean }
 ): Promise<{ image: string | null; text: string | null }> {
   const ai = getAi();
   const imagePart = await fileToGenerativePart(imageFile);
@@ -267,6 +298,20 @@ export async function generateIdPhoto(
       edits.push(retouchPromptPart);
   }
   
+  // New Pro Retouch logic
+  const proEdits = [];
+  if (proRetouchSettings.smoothSkin) proEdits.push('- Smooth skin, remove acne & blemishes, no flat/unnatural skin texture.');
+  if (proRetouchSettings.balanceColor) proEdits.push('- Slightly brighten and apply natural color balance.');
+  if (proRetouchSettings.tidyHair) proEdits.push('- Tidy hair, remove flyaway hairs, and create a clear outline.');
+  if (proRetouchSettings.sharpenFace) proEdits.push('- Increase facial sharpness, brighten eyes, and freshen lips, while keeping true proportions.');
+  if (proRetouchSettings.smoothClothing) proEdits.push('- Smooth out clothing, ensure the collar is neat, and use standard international colors.');
+
+  if (proEdits.length > 0) {
+      edits.push(`**Pro Face Refinement:** Apply the following professional refinements. The goal is an overall beautiful but still standard ID photo. **Crucially, keep the real face and do not over-edit.**
+${proEdits.join('\n')}
+`);
+  }
+
   edits.push(framingPromptPart);
   edits.push(`**Quality:** The final image must be of the highest possible resolution and quality, free from any digital noise or compression artifacts. Aim for a professional, sharp, and clear result suitable for printing. Do not add any text, watermarks, or other artifacts.`);
   
@@ -301,47 +346,290 @@ ${numberedEdits}
   return parseImageModelResponse(response);
 }
 
+export async function generateWeddingPhoto(
+    portraits: { bride?: File; groom?: File; couple?: File },
+    prompt: string,
+    customPoseFile?: File | null
+): Promise<{ main: string | null; bride: string | null; groom: string | null; text: string | null }> {
+    const ai = getAi();
+
+    // Custom Pose Logic
+    if (customPoseFile) {
+        const poseImagePart = await fileToGenerativePart(customPoseFile);
+        let customPosePrompt = '';
+        const imageParts: any[] = [poseImagePart];
+
+        if (portraits.couple) {
+            const coupleImagePart = await fileToGenerativePart(portraits.couple);
+            imageParts.unshift(coupleImagePart); // [couple, pose]
+            customPosePrompt = `
+**CRUCIAL: In the provided source image ([face1]), identify the man and the woman. You MUST preserve 100% of their facial features, identity, and likeness.**
+
+**Task:**
+1.  Analyze the second image provided ([face2]). This is the POSE REFERENCE image.
+2.  Take the people from the POSE REFERENCE image and COMPLETELY REPLACE their heads and faces with the heads and faces of the WOMAN (bride) and the MAN (groom) from the source image ([face1]).
+3.  The final image must be a seamless, ultra-realistic composition where the bride and groom from the source image are now in the bodies, poses, and clothing from the POSE REFERENCE image.
+4.  Apply this overall scene description to the final image: "${prompt}".`;
+        } else if (portraits.bride && portraits.groom) {
+            const brideImagePart = await fileToGenerativePart(portraits.bride);
+            const groomImagePart = await fileToGenerativePart(portraits.groom);
+            imageParts.unshift(groomImagePart); // [groom, pose]
+            imageParts.unshift(brideImagePart); // [bride, groom, pose]
+             customPosePrompt = `
+**CRUCIAL: You MUST preserve 100% of the facial features, identity, and likeness of the people in the source images.**
+
+**Task:**
+1.  Analyze the third image provided ([face3]). This is the POSE REFERENCE image.
+2.  Take the people from the POSE REFERENCE image and COMPLETELY REPLACE their heads and faces with the head and face of the WOMAN (from the first image, [face1]) and the MAN (from the second image, [face2]).
+3.  The final image must be a seamless composition where the bride and groom are now in the bodies, poses, and clothing from the POSE REFERENCE image.
+4.  Apply this overall scene description to the final image: "${prompt}".`;
+        } else {
+            return { main: null, bride: null, groom: null, text: "Để dùng dáng mẫu tùy chỉnh, bạn cần tải lên ảnh đôi hoặc ảnh riêng của cô dâu và chú rể." };
+        }
+
+        try {
+            const mainResponse = await ai.models.generateContent({
+                model: 'gemini-2.5-flash-image',
+                contents: { parts: [...imageParts, { text: customPosePrompt }] },
+                config: { responseModalities: [Modality.IMAGE] },
+            });
+            const mainResult = parseImageModelResponse(mainResponse);
+            return { main: mainResult.image, bride: null, groom: null, text: mainResult.text };
+        } catch (e: any) {
+             console.error("Wedding photo generation failed (custom pose):", e);
+            let errorMessage = "Lỗi khi tạo ảnh với dáng tùy chỉnh.";
+            try {
+                const errorObj = JSON.parse(e.message);
+                if (errorObj.error && errorObj.error.message) {
+                    if (errorObj.error.status === "RESOURCE_EXHAUSTED") {
+                        errorMessage = "Lỗi: Đã đạt đến giới hạn yêu cầu API. Vui lòng thử lại sau ít phút hoặc nâng cấp gói dịch vụ của bạn.";
+                    } else {
+                        errorMessage = errorObj.error.message;
+                    }
+                }
+            } catch (parseError) {
+                if (typeof e.message === 'string' && !e.message.includes('JSON')) {
+                    errorMessage = e.message;
+                }
+            }
+            return { main: null, bride: null, groom: null, text: errorMessage };
+        }
+    }
+
+    // Standard generation (no custom pose)
+    let mainPrompt = '';
+    let brideFacePrompt = '';
+    let groomFacePrompt = '';
+    let imagePartsForMain: any[] = [];
+    let imagePartForBride: any;
+    let imagePartForGroom: any;
+
+    if (portraits.couple) {
+        const coupleImagePart = await fileToGenerativePart(portraits.couple);
+        imagePartsForMain = [coupleImagePart];
+        imagePartForBride = coupleImagePart;
+        imagePartForGroom = coupleImagePart;
+        mainPrompt = `**CRUCIAL: In the provided source image ([face1]), identify the man and the woman. You MUST preserve 100% of their facial features, identity, and likeness.**\n\n**Character Definitions:**\n*   The woman in the source image is the BRIDE.\n*   The man is the GROOM.\n\n**Scene Description:**\n${prompt}\n\n**Final Output:** Create an ultra-realistic wedding photograph.`;
+        brideFacePrompt = `**CRUCIAL: From the provided source image ([face1]), identify the WOMAN. Preserve 100% of her facial features.**\n\n**Task:** Create a close-up portrait of ONLY THE WOMAN. Her pose, angle, and lighting MUST EXACTLY MATCH the bride's appearance in this scene: "${prompt}".`;
+        groomFacePrompt = `**CRUCIAL: From the provided source image ([face1]), identify the MAN. Preserve 100% of his facial features.**\n\n**Task:** Create a close-up portrait of ONLY THE MAN. His pose, angle, and lighting MUST EXACTLY MATCH the groom's appearance in this scene: "${prompt}".`;
+    } else if (portraits.bride && portraits.groom) {
+        const brideImagePart = await fileToGenerativePart(portraits.bride);
+        const groomImagePart = await fileToGenerativePart(portraits.groom);
+        imagePartsForMain = [brideImagePart, groomImagePart];
+        imagePartForBride = brideImagePart;
+        imagePartForGroom = groomImagePart;
+        mainPrompt = `**CRUCIAL: Preserve 100% of the facial features from the provided images.**\n\n**Character Definitions:**\n*   The woman in the first image ([face1]) is the BRIDE.\n*   The man in the second image ([face2]) is the GROOM.\n\n**Scene Description:**\n${prompt}\n\n**Final Output:** Create an ultra-realistic wedding photograph.`;
+        brideFacePrompt = `**CRUCIAL: Use the provided image of the BRIDE ([face1]). Preserve 100% of her facial features.**\n\n**Task:** Create a close-up portrait of ONLY THE BRIDE. Her pose, angle, and lighting MUST EXACTLY MATCH her appearance in this scene: "${prompt}".`;
+        groomFacePrompt = `**CRUCIAL: Use the provided image of the GROOM ([face1]). Preserve 100% of his facial features.**\n\n**Task:** Create a close-up portrait of ONLY THE GROOM. His pose, angle, and lighting MUST EXACTLY MATCH his appearance in this scene: "${prompt}".`;
+    } else {
+         return { main: null, bride: null, groom: null, text: "Vui lòng tải lên ảnh đôi hoặc ảnh riêng của cô dâu và chú rể." };
+    }
+
+    try {
+        // Sequential API calls to avoid rate limiting
+        const mainResponse = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: { parts: [...imagePartsForMain, { text: mainPrompt }] },
+            config: { responseModalities: [Modality.IMAGE] },
+        });
+        const mainResult = parseImageModelResponse(mainResponse);
+
+        // Short delay between calls
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const brideResponse = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: { parts: [imagePartForBride, { text: brideFacePrompt }] },
+            config: { responseModalities: [Modality.IMAGE] },
+        });
+        const brideResult = parseImageModelResponse(brideResponse);
+        
+        // Short delay between calls
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const groomResponse = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: { parts: [imagePartForGroom, { text: groomFacePrompt }] },
+            config: { responseModalities: [Modality.IMAGE] },
+        });
+        const groomResult = parseImageModelResponse(groomResponse);
+        
+        return {
+            main: mainResult.image,
+            bride: brideResult.image,
+            groom: groomResult.image,
+            text: mainResult.text || brideResult.text || groomResult.text,
+        };
+    } catch (e: any) {
+        console.error("Wedding photo generation failed:", e);
+        let errorMessage = "An error occurred during image generation. Please try again later.";
+        try {
+            // The error message from the API is often a JSON string.
+            const errorObj = JSON.parse(e.message);
+            if (errorObj.error && errorObj.error.message) {
+                if (errorObj.error.status === "RESOURCE_EXHAUSTED") {
+                    errorMessage = "Lỗi: Đã đạt đến giới hạn yêu cầu API. Vui lòng thử lại sau ít phút hoặc nâng cấp gói dịch vụ của bạn.";
+                } else {
+                    errorMessage = errorObj.error.message;
+                }
+            }
+        } catch (parseError) {
+            // If it's not JSON, use the original message if it's not too technical.
+            if (typeof e.message === 'string' && !e.message.includes('JSON')) {
+                 errorMessage = e.message;
+            }
+        }
+        return { main: null, bride: null, groom: null, text: errorMessage };
+    }
+}
+
+
+export async function retouchPortrait(
+  imageFile: File,
+  settings: RetouchSettings
+): Promise<{ image: string | null; text: string | null }> {
+  const ai = getAi();
+  const imagePart = await fileToGenerativePart(imageFile);
+
+  const edits = [];
+  edits.push("**CRUCIAL INSTRUCTION: You MUST NOT alter the person's core identity or make them unrecognizable. The goal is enhancement, not transformation. Preserve the original background, clothing, and overall composition.**");
+
+  switch (settings.skinSmoothing) {
+    case 'gentle':
+      edits.push(`**Skin Smoothing (Gentle):** Apply light skin smoothing to reduce minor imperfections. Preserve natural skin texture. Do not make the skin look plastic or overly airbrushed.`);
+      break;
+    case 'professional':
+      edits.push(`**Skin Smoothing (Professional):** Apply professional-grade skin smoothing. Even out skin tone, reduce wrinkles and blemishes significantly, but maintain a realistic skin texture. Perform subtle dodging and burning to enhance facial contours.`);
+      break;
+  }
+  
+  if (settings.blemishRemoval) {
+    edits.push(`**Blemish Removal:** Automatically detect and remove temporary blemishes like pimples and spots.`);
+  }
+
+  if (settings.teethWhitening) {
+    edits.push(`**Teeth Whitening:** If teeth are visible and yellowed, whiten them to a natural, healthy shade. Avoid an unnaturally bright white.`);
+  }
+
+  if (settings.eyeEnlargement > 0) {
+    edits.push(`**Eye Enlargement:** Subtly enlarge the eyes by approximately ${settings.eyeEnlargement / 5}%. The change must be very subtle and natural, enhancing the eyes without looking artificial.`);
+  }
+
+  if (settings.faceSlimming > 0) {
+    edits.push(`**Face Slimming:** Subtly slim the jawline and cheeks by approximately ${settings.faceSlimming / 5}%. The change must be very subtle and preserve the person's recognizable facial structure.`);
+  }
+  
+  edits.push(`**Final Output:** The final image must be high-resolution, sharp, and look like a professionally retouched photograph. Do not add any text or watermarks.`);
+
+  const prompt = `You are a professional portrait retoucher. Edit the provided photo based on the following instructions. \n\n${edits.join('\n\n')}`;
+  
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: {
+      parts: [imagePart, { text: prompt }],
+    },
+    config: {
+        responseModalities: [Modality.IMAGE],
+    },
+  });
+
+  return parseImageModelResponse(response);
+}
+
 
 export async function restorePhoto(
   imageFile: File,
-  outfit: string,
-  hairstyle: string,
-  accessories: string[],
+  mode: string,
+  gender: string,
+  age: string,
+  options: string[],
   customRequest: string
 ): Promise<{ image: string | null; text: string | null }> {
   const ai = getAi();
   const imagePart = await fileToGenerativePart(imageFile);
 
-  const edits = [
-    "**1. Phục hồi & Nâng cấp chất lượng:**",
-    "   - Sửa chữa tất cả các vết xước, nếp gấp, vết ố và các hư hỏng khác.",
-    "   - Tăng cường độ nét và chi tiết trên toàn bộ ảnh, đặc biệt là khuôn mặt.",
-    "   - Khử nhiễu (noise) và làm mịn các vùng bị hạt (grainy).",
-    "   - Tô màu cho ảnh (nếu là ảnh đen trắng) với màu sắc tự nhiên, chân thực, mang phong cách ảnh chụp xưa.",
-    "",
-    "**2. Giữ nguyên nhận dạng:**",
-    "   - **YÊU CẦU TỐI QUAN TRỌNG:** Phải giữ lại 100% nhận dạng, đường nét khuôn mặt, và biểu cảm gốc của người trong ảnh. Không được thay đổi hay làm đẹp khuôn mặt.",
-    "",
-    "**3. Tùy chỉnh theo yêu cầu:**"
-  ];
+  let prompt = "Bạn là một nghệ sĩ phục chế ảnh cũ và chuyên gia kỹ thuật số đẳng cấp thế giới. Nhiệm vụ của bạn là phục hồi và nâng cấp bức ảnh cũ, hư hỏng do người dùng cung cấp thành một tác phẩm nghệ thuật chất lượng cao, sắc nét và chân thực.\n\n";
 
-  if (outfit && outfit !== 'Giữ nguyên') {
-    edits.push(`   - Thay đổi trang phục của người trong ảnh thành '${outfit}' theo phong cách cổ điển, phù hợp với không khí của một bức ảnh chân dung xưa.`);
+  if (options.includes('preserve_face')) {
+      prompt += "**YÊU CẦU QUAN TRỌNG NHẤT: Bắt buộc phải giữ lại 100% các đặc điểm nhận dạng, đường nét khuôn mặt và biểu cảm gốc của (những) người trong ảnh. Không được thay đổi, làm đẹp hay chỉnh sửa khuôn mặt. Người trong ảnh kết quả phải hoàn toàn có thể nhận ra là cùng một người trong ảnh gốc. Đây là quy tắc tối thượng.**\n\n";
   }
 
-  if (hairstyle && hairstyle !== 'Giữ nguyên') {
-    edits.push(`   - Thay đổi kiểu tóc thành '${hairstyle}' theo phong cách cổ điển, phù hợp với khuôn mặt.`);
+  prompt += "**HƯỚNG DẪN CHI TIẾT:**\n\n";
+
+  // 1. Core Restoration Task based on mode
+  prompt += "**1. Nhiệm vụ phục chế chính:**\n";
+  switch(mode) {
+    case 'Phục chế & Tô màu':
+      prompt += "   - Sửa chữa tất cả các vết xước, nếp gấp, vết rách, và hư hỏng. Khử nhiễu và làm rõ các chi tiết bị mờ. Sau đó, tô màu cho bức ảnh một cách tự nhiên và chân thực, sử dụng tông màu phù hợp với bối cảnh và thời đại của bức ảnh.\n";
+      break;
+    case 'Tái tạo ảnh hỏng nặng':
+      prompt += "   - Tập trung vào việc tái tạo lại các vùng bị mất hoặc hư hỏng nặng trên ảnh. Sử dụng các vùng ảnh còn lại và bối cảnh để vẽ lại một cách hợp lý và liền mạch. Đây là nhiệm vụ ưu tiên hàng đầu.\n";
+      break;
+    case 'Khử ố vàng & Phai màu':
+      prompt += "   - Chỉnh sửa màu sắc của ảnh. Loại bỏ hoàn toàn các vết ố vàng, cân bằng lại màu sắc đã bị phai mờ để ảnh trở về tông màu gốc (đen trắng hoặc màu) một cách tự nhiên.\n";
+      break;
+    case 'Phục chế chân dung nâng cao':
+        prompt += "   - Tập trung vào việc phục chế chân dung. Làm mịn da một cách tự nhiên, làm rõ các chi tiết như mắt, mũi, miệng, và tóc trong khi vẫn giữ nguyên các đặc điểm nhận dạng.\n";
+        break;
+    case 'Phục hồi bức tranh và vẽ lại chi tiết':
+        prompt += "   - Xử lý bức ảnh như một tác phẩm nghệ thuật. Không chỉ sửa lỗi, mà còn vẽ lại các chi tiết bị mất, tăng cường độ tương phản và ánh sáng để tạo ra một bức ảnh có chiều sâu, giống như một bức tranh được vẽ lại một cách tỉ mỉ.\n";
+        break;
+    case 'Phục hồi qua 1 nút bấm':
+        prompt += "   - Thực hiện phục chế tự động, toàn diện. Sửa chữa các hư hỏng, tăng cường độ nét, và tô màu (nếu là ảnh đen trắng) để có kết quả tốt nhất có thể một cách nhanh chóng.\n";
+        break;
+    case 'Phục chế chất lượng cao':
+    default:
+      prompt += "   - Thực hiện phục chế toàn diện: Sửa tất cả các vết xước, nếp gấp, vết ố. Tăng cường độ nét và chi tiết trên toàn bộ ảnh. Khử nhiễu (noise) và làm mịn các vùng bị hạt (grainy). Nâng cấp chất lượng ảnh lên mức cao nhất có thể.\n";
+      break;
   }
   
-  if (accessories && accessories.length > 0) {
-      edits.push(`   - Thêm các phụ kiện sau một cách tinh tế và phù hợp: ${accessories.join(', ')}.`);
+  // 2. Additional Options
+  prompt += "\n**2. Các tùy chọn bổ sung:**\n";
+  if (gender) {
+    prompt += `   - Giới tính của người trong ảnh là: ${gender}. Hãy chú ý đến các đặc điểm phù hợp.\n`;
   }
-
+  if (age) {
+    prompt += `   - Ước tính độ tuổi của người trong ảnh là khoảng ${age} tuổi. Hãy tái tạo các đặc điểm da và khuôn mặt cho phù hợp.\n`;
+  }
+  if (options.includes('redraw_hair')) {
+    prompt += "   - Vẽ lại tóc một cách chi tiết: Đặc biệt chú ý đến việc tái tạo lại mái tóc. Vẽ lại từng sợi tóc để tạo cảm giác bồng bềnh, tự nhiên và sắc nét.\n";
+  }
+  if (options.includes('asian_person')) {
+    prompt += "   - Người trong ảnh là người Châu Á. Giữ lại các đặc điểm đặc trưng như màu tóc đen, màu da và cấu trúc khuôn mặt.\n";
+  }
+  if (options.includes('redraw_outfit')) {
+    prompt += "   - Vẽ lại trang phục: Làm rõ các chi tiết, nếp gấp và hoa văn trên quần áo. Nếu trang phục quá mờ, hãy tái tạo lại theo phong cách cổ điển phù hợp.\n";
+  }
+  if (options.includes('sharpen_background')) {
+    prompt += "   - Làm rõ nét hậu cảnh: Cải thiện chi tiết và độ nét của bối cảnh phía sau chủ thể.\n";
+  }
+  
+  // 3. Custom Request from user
   if (customRequest) {
-      edits.push(`   - **Yêu cầu đặc biệt từ người dùng:** ${customRequest}.`);
+    prompt += `\n**3. Yêu cầu đặc biệt từ người dùng:** ${customRequest}\n`;
   }
 
-  const prompt = `Bạn là một chuyên gia phục chế và chỉnh sửa ảnh chân dung cũ. Nhiệm vụ của bạn là biến bức ảnh gốc được cung cấp thành một tác phẩm chân dung nghệ thuật, chất lượng cao, mang phong cách hoài cổ. Hãy thực hiện các bước sau một cách cẩn thận:\n\n${edits.join('\n')}`;
+  prompt += "\n**KẾT QUẢ CUỐI CÙNG:** Phải là một bức ảnh chất lượng cao, độ phân giải 8K UHD, siêu thực và không có bất kỳ artefact kỹ thuật số nào.";
   
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',
@@ -441,13 +729,30 @@ export async function generateConceptPhoto(
     simpleFamilyMode: boolean,
     preserveFaces: boolean,
     arrangementRequest?: string,
-    additionalRequest?: string
+    additionalRequest?: string,
+    customPoseFile?: File | null
 ): Promise<{ image: string | null; text: string | null }> {
     const ai = getAi();
     
-    let fullPrompt = prompt;
+    let fullPrompt = '';
+    const imageParts = await Promise.all(portraits.map(p => fileToGenerativePart(p.file)));
 
-    if (isFamilyPrompt) {
+    if (customPoseFile) {
+        const poseImagePart = await fileToGenerativePart(customPoseFile);
+        imageParts.push(poseImagePart); 
+
+        fullPrompt = `
+**CRUCIAL INSTRUCTION: You MUST preserve the exact facial features, identity, and likeness of the person in the first image ([face1]).**
+
+**Task:**
+1. Analyze the last image provided. This is the POSE REFERENCE image. Understand the pose, composition, and clothing of the person in it.
+2. Take the person from the POSE REFERENCE image and COMPLETELY REPLACE their head and face with the head and face of the person from the first image ([face1]).
+3. The final image should be a seamless composition where the person from [face1] is now in the body, pose, and clothing from the POSE REFERENCE image.
+4. Apply this overall scene description to the final image: "${prompt}".
+${additionalRequest ? `\n\n**Additional User Request:** ${additionalRequest}` : ''}
+`;
+
+    } else if (isFamilyPrompt) {
         let faceMapping = 'Character Definitions:\n';
         portraits.forEach((p, index) => {
             if ('role' in p) { // FamilyMember
@@ -469,17 +774,17 @@ export async function generateConceptPhoto(
         } else {
             fullPrompt += `\n\n**Arrangement:** Arrange the people naturally based on their roles and heights.`;
         }
+    } else {
+         fullPrompt = prompt;
     }
 
-    if (preserveFaces) {
+    if (preserveFaces && !customPoseFile) { // customPoseFile prompt already includes this
         fullPrompt = `**CRUCIAL INSTRUCTION: You MUST preserve the exact facial features, identity, and likeness of each person from their respective input photos.** This includes their facial expressions. Do not add smiles or change their expressions. The output faces must be perfectly recognizable.\n\n${fullPrompt}`;
     }
     
-    if (additionalRequest) {
+    if (additionalRequest && !customPoseFile) {
         fullPrompt += `\n\n**Additional User Request:** ${additionalRequest}`;
     }
-
-    const imageParts = await Promise.all(portraits.map(p => fileToGenerativePart(p.file)));
 
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',

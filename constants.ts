@@ -1,9 +1,11 @@
+
 import type { Background, Outfit, Hairstyle, AspectRatio, GenderOption, RetouchOption, CountryTemplate, DocumentType, LightingOption, ExpressionOption } from './types';
 
 export const BACKGROUNDS: Background[] = [
   { id: 'white', name: 'Trắng', tailwindColor: 'bg-white' },
   { id: 'light-gray', name: 'Xám nhạt', tailwindColor: 'bg-slate-200' },
   { id: 'light-blue', name: 'Xanh nhạt', tailwindColor: 'bg-blue-100' },
+  { id: 'xanh-lam-1', name: 'Xanh lam 1', tailwindColor: 'bg-xanh-lam-1' },
   { id: 'off-white', name: 'Trắng ngà', tailwindColor: 'bg-slate-50' },
   { id: 'custom-color', name: 'Tùy chọn', tailwindColor: '' },
 ];

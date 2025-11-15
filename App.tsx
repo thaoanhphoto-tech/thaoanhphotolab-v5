@@ -1,958 +1,674 @@
 
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { jwtDecode } from "jwt-decode";
-import { Header } from './components/Header';
-import { Loader } from './components/Loader';
-import { PaymentModal } from './components/PaymentModal';
-import { AiChatbot } from './components/AiChatbot';
-import { User, PlanId, getUsers, saveUsers, findOrCreateUserByGoogle, addRecentLogin, getPrintRequests, addPrintRequest, PrintRequest, PrintOrderDetails, updatePrintRequest, PersonnelProfile, getPersonnelProfiles, savePersonnelProfiles, generateReferralCode, BankAccount, getBankAccounts, saveBankAccounts, TimeClockEntry, getTimeClockEntries, addTimeClockEntry, StudioStaff, getStudioStaff, saveStudioStaff, ManualOrderItem } from './userStore';
-import { getProducts, saveProducts, Product, getProductBases, saveProductBases } from './productStore';
-import { getSizes, saveSizes, getServiceCategories, saveServiceCategories } from './catalogStore';
-import { ToastProvider, useToast, ToastContainer } from './components/Toast';
-import { AiAssistantIcon } from './components/icons/AiAssistantIcon';
-import { Footer } from './components/Footer';
-import { ContactFAB } from './components/ContactFAB';
-import type { Theme } from './types';
-import { PricingTable, loadPrices, savePrices } from './pricingStore';
-import { PlanDetailsTable, loadPlans, savePlans } from './planStore';
-import { LoyaltySettings, loadLoyaltySettings, saveLoyaltySettings, Reward, getRewards, saveRewards, Voucher, getVouchers, addVoucher as addVoucherToStore, saveVouchers } from './loyaltyStore';
-import { Material, ProductBOM, getMaterials, saveMaterials, getProductBOMs, saveProductBOMs, StudioAsset, getStudioAssets, saveStudioAssets, AssetLog, addAssetLog as addInventoryAssetLog, Supplier, getSuppliers, saveSuppliers, InventoryTransaction, getInventoryTransactions, addInventoryTransaction, PurchaseOrder, getPurchaseOrders, savePurchaseOrders, addPurchaseOrder, updatePurchaseOrder, Warehouse, getWarehouses, saveWarehouses, WarehouseTransfer, getWarehouseTransfers, addWarehouseTransfer, completeWarehouseTransfer } from './inventoryStore';
-import { Expense, getExpenses, addExpense } from './expenseStore';
-import { getScheduleEvents, saveScheduleEvents } from './scheduleStore';
-import { Customer } from './components/studio-management/crm/types';
-import { ServicePackage, Contract } from './components/studio-management/contracts/types';
-import { getServicePackages, saveServicePackages, getContracts, saveContracts, addPaymentToContract as addPaymentToContractStore } from './contractStore';
-import { getCustomers, saveCustomers, addCustomer as addCustomerToStore, updateCustomer } from './crmStore';
-import { PostProductionProject } from './components/studio-management/post-production/types';
-import { getPostProductionProjects, updatePostProductionProject as updatePpProject } from './postProductionStore';
-import { PrintOrderPage } from './components/PrintOrderPage';
-import { CartItem, addToCart, updateCartQuantity, removeFromCart } from './cartStore';
+import { Header } from './components/Header.tsx';
+import { Footer } from './components/Footer.tsx';
+import { Loader } from './components/Loader.tsx';
+import { ToastProvider, useToast, ToastContainer } from './components/Toast.tsx';
+import { ContactFAB } from './components/ContactFAB.tsx';
+import { AiChatbot } from './components/AiChatbot.tsx';
+import { AiAssistantIcon } from './components/icons/AiAssistantIcon.tsx';
+import { MockPaymentPage } from './components/MockPaymentPage.tsx';
+import { PaymentModal } from './components/PaymentModal.tsx';
+
+// Data stores
+import { 
+    User, getUsers, saveUsers, PlanId, findOrCreateUserByGoogle, isFreeUserOnly, addRecentLogin,
+    PrintRequest, getPrintRequests, savePrintRequests, addPrintRequest, updatePrintRequest,
+    getBankAccounts, saveBankAccounts, BankAccount, getPersonnelProfiles, savePersonnelProfiles, PersonnelProfile,
+    getStudioStaff, saveStudioStaff, StudioStaff,
+    getTimeClockEntries, saveTimeClockEntries, addTimeClockEntry, TimeClockEntry
+} from './userStore.ts';
+import { Product, getProducts, saveProducts, getProductBases, saveProductBases } from './productStore.ts';
+import { loadPrices, savePrices, PricingTable } from './pricingStore.ts';
+import { PlanDetailsTable, loadPlans, savePlans } from './planStore.ts';
+import { loadPermissions, savePermissions, PermissionsTable } from './permissionStore.ts';
+import { CartItem, getCart, saveCart, addToCart, updateCartQuantity, removeFromCart, clearCart } from './cartStore.ts';
+import { LoyaltySettings, Reward, Voucher, loadLoyaltySettings, saveLoyaltySettings, getRewards, saveRewards, getVouchers, saveVouchers, addVoucher as addVoucherToStore } from './loyaltyStore.ts';
+import { Material, ProductBOM, Supplier, InventoryTransaction, PurchaseOrder, Warehouse, WarehouseTransfer, getMaterials, saveMaterials, getProductBOMs, saveProductBOMs, getSuppliers, saveSuppliers, getInventoryTransactions, saveInventoryTransactions, addInventoryTransaction, getPurchaseOrders, savePurchaseOrders, addPurchaseOrder, updatePurchaseOrder, getWarehouses, saveWarehouses, getWarehouseTransfers, saveWarehouseTransfers, addWarehouseTransfer, completeWarehouseTransfer, getStudioAssets, saveStudioAssets, StudioAsset, AssetLog, addAssetLog } from './inventoryStore.ts';
+import { Expense, getExpenses, saveExpenses, addExpense as addExpenseToStore } from './expenseStore.ts';
+import { MaterialDefinition, getSizes, saveSizes, getServiceCategories, saveServiceCategories, getMaterialDefinitions, saveMaterialDefinitions, getMaterialUnits, saveMaterialUnits } from './catalogStore.ts';
+import { Customer } from './components/studio-management/crm/types.ts';
+import { getCustomers, saveCustomers, addCustomer as addCustomerToStore, updateCustomer as updateCustomerInStore } from './crmStore.ts';
+import { ServicePackage, Contract, Payment } from './components/studio-management/contracts/types.ts';
+import { getServicePackages, saveServicePackages, getContracts, saveContracts, addPaymentToContract } from './contractStore.ts';
+import { PostProductionProject } from './components/studio-management/post-production/types.ts';
+import { getPostProductionProjects, savePostProductionProjects, updatePostProductionProject } from './postProductionStore.ts';
+
+// Type definitions
+import type { Theme } from './types.ts';
+
+// Lazy-loaded page components
+const HomePage = lazy(() => import('./components/HomePage.tsx'));
+const ServicePage = lazy(() => import('./components/ServicePage.tsx'));
+const ProductPage = lazy(() => import('./components/ProductPage.tsx'));
+const LoginPage = lazy(() => import('./components/LoginPage.tsx'));
+const RegisterPage = lazy(() => import('./components/RegisterPage.tsx'));
+const PricingPage = lazy(() => import('./components/PricingPage.tsx'));
+const BlogPage = lazy(() => import('./components/BlogPage.tsx'));
+const BlogPostPage = lazy(() => import('./components/BlogPostPage.tsx'));
+const PrintQueuePage = lazy(() => import('./components/PrintQueuePage.tsx'));
+const PrintOrderPage = lazy(() => import('./components/PrintOrderPage.tsx'));
+const PromotionsPage = lazy(() => import('./components/PromotionsPage.tsx'));
+const MainProductsPage = lazy(() => import('./components/MainProductsPage.tsx'));
+const SearchResultsPage = lazy(() => import('./components/SearchResultsPage.tsx'));
+const CartPage = lazy(() => import('./components/CartPage.tsx'));
+const MyAccountPage = lazy(() => import('./components/MyAccountPage.tsx'));
+const UserManagementPage = lazy(() => import('./components/UserManagementPage.tsx'));
+const PricingManagementPage = lazy(() => import('./components/PricingManagementPage.tsx'));
+const ProductManagementPage = lazy(() => import('./components/ProductManagementPage.tsx'));
+const PlanManagementPage = lazy(() => import('./components/PlanManagementPage.tsx'));
+const CatalogManagementPage = lazy(() => import('./components/CatalogManagementPage.tsx'));
+const LabOperationPage = lazy(() => import('./components/lab-operation/LabOperationPage.tsx'));
+const DebtReportPage = lazy(() => import('./components/lab-operation/DebtReportPage.tsx'));
+const TimeClockPage = lazy(() => import('./components/TimeClockPage.tsx'));
+const StudioManagementHub = lazy(() => import('./components/studio-management/StudioManagementHub.tsx'));
+const WeddingStudioManager = lazy(() => import('./components/studio-management/WeddingStudioManager.tsx'));
+const TracePage = lazy(() => import('./components/TracePage.tsx'));
+const CommunityPage = lazy(() => import('./components/CommunityPage.tsx'));
+const SchedulePage = lazy(() => import('./components/SchedulePage.tsx'));
 
 
-declare const google: any;
+// Lazy-loaded Tool components
+const Introduction = lazy(() => import('./components/Introduction.tsx'));
+const IdPhotoGenerator = lazy(() => import('./components/IdPhotoGenerator.tsx'));
+const PhotoRestorer = lazy(() => import('./components/PhotoRestorer.tsx'));
+const ConceptPhotoGenerator = lazy(() => import('./components/concept-photo/ConceptPhotoGenerator.tsx'));
+const FamilyPhotoComposer = lazy(() => import('./components/FamilyPhotoComposer.tsx'));
+const AiWeddingComposer = lazy(() => import('./components/AiWeddingComposer.tsx'));
+const PhotoLab = lazy(() => import('./components/PhotoLab.tsx'));
+const SocialMediaPostGenerator = lazy(() => import('./components/SocialMediaPostGenerator.tsx'));
+const AiPortraitMaster = lazy(() => import('./components/AiPortraitMaster.tsx'));
 
-export type PageState =
-  | { page: 'home' }
-  | { page: 'login' }
-  | { page: 'register' }
-  | { page: 'tool', toolId: string }
-  | { page: 'service', serviceId: string }
-  | { page: 'product', serviceId: string, productId: string }
-  | { page: 'blog' }
-  | { page: 'blog_post', postId: string }
-  | { page: 'pricing' }
-  | { page: 'promotions' }
-  | { page: 'user_management' }
-  | { page: 'print_queue' }
-  | { page: 'print_order', requestId: string }
-  | { page: 'main_products' }
-  | { page: 'pricing_management' }
-  | { page: 'plan_management' }
-  | { page: 'product_management' }
-  | { page: 'catalog_management' }
-  | { page: 'my_account' }
-  | { page: 'inventory_management' }
-  | { page: 'time_clock' }
-  | { page: 'lab_operation' }
-  | { page: 'schedule' }
-  | { page: 'community', selectedUserId?: string }
-  | { page: 'wedding_manager' }
-  | { page: 'studio_hub' }
-  | { page: 'mock_payment', planId: PlanId }
-  | { page: 'invoice', invoiceId: string }
-  | { page: 'debt_report', customerZalo: string }
-  | { page: 'search_results', query: string }
-  | { page: 'cart' };
-
-
-export type ActiveApp = 'idPhoto' | 'photoRestorer' | 'proAiRelight' | 'imageGenerator' | 'conceptPhoto' | 'familyPhotoComposer' | 'socialMediaPostGenerator' | 'photoLab' | 'batchColorCorrector' | 'introduction';
-
-// Lazy load components for code splitting
-const IdPhotoGenerator = lazy(() => import('./components/IdPhotoGenerator').then(module => ({ default: module.IdPhotoGenerator })));
-const PhotoRestorer = lazy(() => import('./components/PhotoRestorer').then(module => ({ default: module.PhotoRestorer })));
-const Introduction = lazy(() => import('./components/Introduction').then(module => ({ default: module.Introduction })));
-const ProAiRelight = lazy(() => import('./components/pro-ai-relight/ProAiRelight').then(module => ({ default: module.ProAiRelight })));
-const ImageGenerator = lazy(() => import('./components/ImageGenerator').then(module => ({ default: module.ImageGenerator })));
-const ConceptPhotoGenerator = lazy(() => import('./components/concept-photo/ConceptPhotoGenerator').then(module => ({ default: module.ConceptPhotoGenerator })));
-const FamilyPhotoComposer = lazy(() => import('./components/FamilyPhotoComposer').then(module => ({ default: module.FamilyPhotoComposer })));
-const SocialMediaPostGenerator = lazy(() => import('./components/SocialMediaPostGenerator').then(module => ({ default: module.SocialMediaPostGenerator })));
-const PhotoLab = lazy(() => import('./components/PhotoLab').then(module => ({ default: module.PhotoLab })));
-const BatchColorCorrector = lazy(() => import('./components/BatchColorCorrector').then(module => ({ default: module.BatchColorCorrector })));
-const HomePage = lazy(() => import('./components/HomePage').then(module => ({ default: module.HomePage })));
-const ServicePage = lazy(() => import('./components/ServicePage').then(module => ({ default: module.ServicePage })));
-const ProductPage = lazy(() => import('./components/ProductPage').then(module => ({ default: module.ProductPage })));
-const LoginPage = lazy(() => import('./components/LoginPage').then(module => ({ default: module.LoginPage })));
-const RegisterPage = lazy(() => import('./components/RegisterPage').then(module => ({ default: module.RegisterPage })));
-const BlogPage = lazy(() => import('./components/BlogPage').then(module => ({ default: module.BlogPage })));
-const BlogPostPage = lazy(() => import('./components/BlogPostPage').then(module => ({ default: module.BlogPostPage })));
-const PricingPage = lazy(() => import('./components/PricingPage').then(module => ({ default: module.PricingPage })));
-const PromotionsPage = lazy(() => import('./components/PromotionsPage').then(module => ({ default: module.PromotionsPage })));
-const UserManagementPage = lazy(() => import('./UserManagementPage'));
-const PrintQueuePage = lazy(() => import('./components/PrintQueuePage').then(module => ({ default: module.PrintQueuePage })));
-const MainProductsPage = lazy(() => import('./components/MainProductsPage').then(module => ({ default: module.MainProductsPage })));
-const PricingManagementPage = lazy(() => import('./components/PricingManagementPage').then(module => ({ default: module.PricingManagementPage })));
-const PlanManagementPage = lazy(() => import('./components/PlanManagementPage'));
-const ProductManagementPage = lazy(() => import('./components/ProductManagementPage').then(module => ({ default: module.ProductManagementPage })));
-const CatalogManagementPage = lazy(() => import('./components/CatalogManagementPage').then(module => ({ default: module.CatalogManagementPage })));
-const MyAccountPage = lazy(() => import('./components/MyAccountPage'));
-const InventoryManagementPage = lazy(() => import('./components/InventoryManagementPage'));
-const TimeClockPage = lazy(() => import('./components/TimeClockPage').then(module => ({ default: module.TimeClockPage })));
-const LabOperationPage = lazy(() => import('./components/lab-operation/LabOperationPage'));
-const SchedulePage = lazy(() => import('./components/SchedulePage'));
-const CommunityPage = lazy(() => import('./components/CommunityPage'));
-const WeddingStudioManager = lazy(() => import('./components/studio-management/WeddingStudioManager'));
-const StudioManagementHub = lazy(() => import('./components/studio-management/StudioManagementHub'));
-const MockPaymentPage = lazy(() => import('./components/MockPaymentPage').then(module => ({ default: module.MockPaymentPage })));
-const InvoicePage = lazy(() => import('./components/lab-operation/InvoicePage').then(module => ({ default: module.InvoicePage })));
-const DebtReportPage = lazy(() => import('./components/lab-operation/DebtReportPage').then(module => ({ default: module.DebtReportPage })));
-const SearchResultsPage = lazy(() => import('./components/SearchResultsPage').then(module => ({ default: module.SearchResultsPage })));
-const CartPage = lazy(() => import('./components/CartPage').then(module => ({ default: module.CartPage })));
-
-const formatCurrency = (value: number) => new Intl.NumberFormat('vi-VN').format(value) + 'đ';
+export type PageState = {
+  page: string;
+  [key: string]: any;
+};
 
 const AppContent: React.FC = () => {
-  const [pageState, setPageState] = useState<PageState>({ page: 'home' });
-  const { showToast } = useToast();
-  const [users, setUsers] = useState<User[]>(() => getUsers());
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const sessionUserJson = sessionStorage.getItem('loggedInUser_v1');
-    if (sessionUserJson) {
-        try {
-            return JSON.parse(sessionUserJson);
-        } catch (e) {
-            sessionStorage.removeItem('loggedInUser_v1');
-        }
-    }
-    const rememberedCredsJson = localStorage.getItem('rememberedCredentials_v1');
-    if (rememberedCredsJson) {
-        try {
-            const { username, password } = JSON.parse(rememberedCredsJson);
-            const allUsers = getUsers(); 
-            const user = allUsers.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
-            if (user) {
-                sessionStorage.setItem('loggedInUser_v1', JSON.stringify(user));
-                addRecentLogin(user.username);
-                return user;
-            } else {
-                localStorage.removeItem('rememberedCredentials_v1');
-            }
-        } catch (e) {
-            localStorage.removeItem('rememberedCredentials_v1');
-        }
-    }
-    return null;
-  });
+    // State Management
+    const [pageState, setPageState] = useState<PageState>({ page: 'home' });
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [users, setUsers] = useState<User[]>([]);
+    const [theme, setTheme] = useState<Theme>('dark');
+    const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+    const [isInitialLogin, setIsInitialLogin] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState<PlanId | null>(null);
+    const [isMockPayment, setIsMockPayment] = useState(false);
+    const [isAdminMode, setIsAdminMode] = useState(false);
+    const [newPrintRequestsCount, setNewPrintRequestsCount] = useState(0);
 
-  const [theme, setTheme] = useState<Theme>(() => {
-    const savedTheme = localStorage.getItem('theme') as Theme | null;
-    return savedTheme || 'dark';
-  });
-
-  const [paymentPlan, setPaymentPlan] = useState<PlanId | null>(null);
-  const [isAiChatbotOpen, setIsAiChatbotOpen] = useState(false);
-  const [isInitialLogin, setIsInitialLogin] = useState(false);
-  const [isPrintOrderModalOpen, setIsPrintOrderModalOpen] = useState(false);
-  const [printOrderData, setPrintOrderData] = useState<{ imageUrl: string; sourceTool: string } | null>(null);
-  const [imageToDownloadUrl, setImageToDownloadUrl] = useState<string | null>(null);
-
-  // Data states
-  const [products, setProducts] = useState<Product[]>(() => getProducts());
-  const [productBases, setProductBases] = useState<string[]>(() => getProductBases());
-  const [sizes, setSizes] = useState<string[]>(() => getSizes());
-  const [serviceCategories, setServiceCategories] = useState<string[]>(() => getServiceCategories());
-  const [prices, setPrices] = useState<PricingTable>(() => loadPrices());
-  const [plans, setPlans] = useState<PlanDetailsTable>(() => loadPlans());
-  const [loyaltySettings, setLoyaltySettings] = useState<LoyaltySettings>(() => loadLoyaltySettings());
-  const [rewards, setRewards] = useState<Reward[]>(() => getRewards());
-  const [vouchers, setVouchers] = useState<Voucher[]>(() => getVouchers());
-  const [printRequests, setPrintRequests] = useState<PrintRequest[]>(() => getPrintRequests());
-  const [personnelProfiles, setPersonnelProfiles] = useState<PersonnelProfile[]>(() => getPersonnelProfiles());
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(() => getBankAccounts());
-  const [timeClockEntries, setTimeClockEntries] = useState<TimeClockEntry[]>(() => getTimeClockEntries());
-  const [studioStaff, setStudioStaff] = useState<StudioStaff[]>(() => currentUser ? getStudioStaff(currentUser.id) : []);
-  const [materials, setMaterials] = useState<Material[]>(() => getMaterials());
-  const [productBOMs, setProductBOMs] = useState<ProductBOM[]>(() => getProductBOMs());
-  const [expenses, setExpenses] = useState<Expense[]>(() => getExpenses());
-  const [cart, setCart] = useState<CartItem[]>(() => JSON.parse(localStorage.getItem('app_shopping_cart_v1') || '[]'));
-  // New inventory states
-  const [suppliers, setSuppliers] = useState<Supplier[]>(() => getSuppliers());
-  const [inventoryTransactions, setInventoryTransactions] = useState<InventoryTransaction[]>(() => getInventoryTransactions());
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => getPurchaseOrders());
-  const [warehouses, setWarehouses] = useState<Warehouse[]>(() => getWarehouses());
-  const [warehouseTransfers, setWarehouseTransfers] = useState<WarehouseTransfer[]>(() => getWarehouseTransfers());
-
-
-  // Studio Management States
-  const [customers, setCustomers] = useState<Customer[]>(() => currentUser ? getCustomers(currentUser.id) : []);
-  const [servicePackages, setServicePackages] = useState<ServicePackage[]>(() => getServicePackages());
-  const [contracts, setContracts] = useState<Contract[]>(() => getContracts());
-  const [postProductionProjects, setPostProductionProjects] = useState<PostProductionProject[]>(() => getPostProductionProjects());
-  const [studioAssets, setStudioAssets] = useState<StudioAsset[]>(() => getStudioAssets());
-  
-
-  const navigateTo = useCallback((state: PageState) => {
-    setPageState(state);
-    window.scrollTo(0, 0);
-  }, []);
-
-  const isAdmin = currentUser?.purchasedPlans.includes('admin') || false;
-  
-  // --- Cart Handlers ---
-  const handleAddToCart = (productId: string, quantity: number) => {
-    const newCart = addToCart(productId, quantity);
-    setCart(newCart);
-    showToast('Đã thêm sản phẩm vào giỏ hàng!', 'success');
-  };
-
-  const handleUpdateCartQuantity = (productId: string, quantity: number) => {
-    const newCart = updateCartQuantity(productId, quantity);
-    setCart(newCart);
-  };
-  
-  const handleRemoveFromCart = (productId: string) => {
-    const newCart = removeFromCart(productId);
-    setCart(newCart);
-  };
-
-  // --- Data Update Handlers ---
-  const handleUpdateUsers = (newUsers: User[]) => {
-    saveUsers(newUsers);
-    setUsers(newUsers);
-  };
-
-  const handleUpdateSingleUser = (userId: string, updates: Partial<User>) => {
-      const newUsers = users.map(u => (u.id === userId ? { ...u, ...updates } : u));
-      handleUpdateUsers(newUsers);
-      if (currentUser?.id === userId) {
-        const updatedCurrentUser = { ...currentUser, ...updates };
-        setCurrentUser(updatedCurrentUser);
-        sessionStorage.setItem('loggedInUser_v1', JSON.stringify(updatedCurrentUser));
-      }
-  };
-  
-  const handleUpdateProducts = (newProducts: Product[]) => {
-    saveProducts(newProducts);
-    setProducts(newProducts);
-  };
-  
-  const handleUpdatePrices = (newPrices: PricingTable) => {
-    savePrices(newPrices);
-    setPrices(newPrices);
-    showToast('Bảng giá đã được cập nhật!', 'success');
-  };
-  
-  const handleUpdatePlans = (newPlans: PlanDetailsTable) => {
-    savePlans(newPlans);
-    setPlans(newPlans);
-  };
-
-  const handleUpdateProductBases = (newBases: string[]) => {
-    saveProductBases(newBases);
-    setProductBases(newBases);
-  };
-  
-  const handleUpdateSizes = (newSizes: string[]) => {
-    saveSizes(newSizes);
-    setSizes(newSizes);
-  };
-  
-  const handleUpdateServiceCategories = (newCategories: string[]) => {
-    saveServiceCategories(newCategories);
-    setServiceCategories(newCategories);
-  };
-
-  const handleUpdateLoyaltySettings = (settings: LoyaltySettings) => {
-    saveLoyaltySettings(settings);
-    setLoyaltySettings(settings);
-    showToast('Cài đặt khách hàng thân thiết đã được cập nhật!', 'success');
-  };
-  
-  const handleUpdateRewards = (newRewards: Reward[]) => {
-    saveRewards(newRewards);
-    setRewards(newRewards);
-  };
-  
-  const handleUpdateVouchers = (newVouchers: Voucher[]) => {
-    saveVouchers(newVouchers);
-    setVouchers(newVouchers);
-  };
-
-  const handleManualPointUpdate = (userId: string, points: number, reason: string) => {
-    const newUsers = users.map(u => {
-      if (u.id === userId) {
-        return { ...u, points: (u.points || 0) + points };
-      }
-      return u;
-    });
-    handleUpdateUsers(newUsers);
-    showToast(`Đã cập nhật ${points} điểm cho người dùng. Lý do: ${reason}`, 'success');
-  };
-  
-  const handleRedeemReward = (rewardId: string): { success: boolean; message: string } => {
-    if (!currentUser) return { success: false, message: 'Vui lòng đăng nhập.' };
-    const reward = rewards.find(r => r.id === rewardId);
-    if (!reward) return { success: false, message: 'Không tìm thấy phần thưởng.' };
-    if ((currentUser.points || 0) < reward.pointsCost) return { success: false, message: 'Bạn không đủ điểm.' };
+    // Data states
+    const [products, setProducts] = useState<Product[]>([]);
+    const [prices, setPrices] = useState<PricingTable>(() => loadPrices());
+    const [plans, setPlans] = useState<PlanDetailsTable>(() => loadPlans());
+    const [permissions, setPermissions] = useState<PermissionsTable>(() => loadPermissions());
+    const [cart, setCart] = useState<CartItem[]>([]);
+    const [requests, setRequests] = useState<PrintRequest[]>([]);
+    const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+    const [personnelProfiles, setPersonnelProfiles] = useState<PersonnelProfile[]>([]);
+    const [loyaltySettings, setLoyaltySettings] = useState<LoyaltySettings>(() => loadLoyaltySettings());
+    const [rewards, setRewards] = useState<Reward[]>([]);
+    const [vouchers, setVouchers] = useState<Voucher[]>([]);
+    const [materials, setMaterials] = useState<Material[]>([]);
+    const [productBOMs, setProductBOMs] = useState<ProductBOM[]>([]);
+    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+    const [inventoryTransactions, setInventoryTransactions] = useState<InventoryTransaction[]>([]);
+    const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+    const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+    const [warehouseTransfers, setWarehouseTransfers] = useState<WarehouseTransfer[]>([]);
+    const [expenses, setExpenses] = useState<Expense[]>([]);
+    const [timeClockEntries, setTimeClockEntries] = useState<TimeClockEntry[]>([]);
     
-    const updatedUser = { ...currentUser, points: (currentUser.points || 0) - reward.pointsCost };
-    handleUpdateSingleUser(currentUser.id, { points: updatedUser.points });
+    // Catalog states
+    const [productBases, setProductBases] = useState<string[]>([]);
+    const [sizes, setSizes] = useState<string[]>([]);
+    const [serviceCategories, setServiceCategories] = useState<string[]>([]);
+    const [materialDefinitions, setMaterialDefinitions] = useState<MaterialDefinition[]>([]);
+    const [materialUnits, setMaterialUnits] = useState<string[]>([]);
 
-    const newVoucher: Voucher = {
-      id: `vouch-${Date.now()}`,
-      code: `REDEEM-${currentUser.username.substring(0, 3).toUpperCase()}${Date.now().toString().slice(-4)}`,
-      userId: currentUser.id,
-      createdAt: Date.now(),
-      status: 'active',
-      rewardId: reward.id,
-    };
-    handleUpdateVouchers([newVoucher, ...vouchers]);
-
-    return { success: true, message: `Đổi thành công "${reward.description}"! Kiểm tra voucher trong tài khoản.` };
-  };
-
-  const handleAddVoucher = (voucherData: Omit<Voucher, 'id' | 'userId' | 'createdAt' | 'status'>) => {
-    addVoucherToStore(voucherData);
-    setVouchers(getVouchers());
-    showToast('Đã tạo voucher khuyến mãi mới!', 'success');
-  };
-
-  const handleAddExpense = (expenseData: Omit<Expense, 'id'>) => {
-    addExpense(expenseData);
-    setExpenses(getExpenses());
-  };
-
-  const handleAddCustomer = (customerData: Omit<Customer, 'id' | 'createdAt' | 'interactions'>) => {
-    if (!currentUser) return;
-    const newCustomer = addCustomerToStore(currentUser.id, customerData);
-    setCustomers(prev => [newCustomer, ...prev]);
-  };
-  
-  const handleUpdateCustomer = (customer: Customer) => {
-    if (!currentUser) return;
-    const updatedCustomers = updateCustomer(currentUser.id, customer);
-    setCustomers(updatedCustomers);
-  };
-  
-  const handleAddPaymentToContract = (contractId: string, amount: number, date: string, method: string, notes?: string) => {
-    const newPayment = { amount, date, method, notes };
-    const updatedContracts = addPaymentToContractStore(contractId, newPayment);
-    setContracts(updatedContracts);
-  };
-  
-  const handleUpdatePostProductionProject = (project: PostProductionProject) => {
-      updatePpProject(project);
-      setPostProductionProjects(getPostProductionProjects());
-  };
-  
-  const handleUpdateStudioAsset = (asset: StudioAsset) => {
-      const allAssets = getStudioAssets();
-      const exists = allAssets.some(a => a.id === asset.id);
-      let updatedAssets;
-      if (exists) {
-          updatedAssets = allAssets.map(a => a.id === asset.id ? asset : a);
-      } else {
-          updatedAssets = [asset, ...allAssets];
-      }
-      saveStudioAssets(updatedAssets);
-      setStudioAssets(updatedAssets);
-  };
-
-  const handleAddAssetLog = (assetId: string, log: Omit<AssetLog, 'timestamp'>) => {
-      addInventoryAssetLog(assetId, log);
-      setStudioAssets(getStudioAssets());
-  };
-  
-  const handleUpdateServicePackages = (newPackages: ServicePackage[]) => {
-      saveServicePackages(newPackages);
-      setServicePackages(newPackages);
-  };
-
-  const handleUpdateContracts = (newContracts: Contract[]) => {
-      saveContracts(newContracts);
-      setContracts(newContracts);
-  };
-
-  const handleUpdatePersonnelProfile = (userId: string, profile: PersonnelProfile) => {
-      const newProfiles = [...personnelProfiles.filter(p => p.userId !== userId), profile];
-      savePersonnelProfiles(newProfiles);
-      setPersonnelProfiles(newProfiles);
-  };
-
-  const handleUpdateSuppliers = (newSuppliers: Supplier[]) => {
-    saveSuppliers(newSuppliers);
-    setSuppliers(newSuppliers);
-  };
-
-  const handleAddInventoryTransaction = (transaction: Omit<InventoryTransaction, 'id' | 'timestamp'>) => {
-    addInventoryTransaction(transaction);
-    // Refresh related states
-    setInventoryTransactions(getInventoryTransactions());
-    setMaterials(getMaterials());
-    setSuppliers(getSuppliers());
-  };
-  
-  const handleAddPurchaseOrder = (orderData: Omit<PurchaseOrder, 'id' | 'timestamp'>) => {
-      addPurchaseOrder(orderData);
-      setPurchaseOrders(getPurchaseOrders());
-  };
-
-  const handleUpdatePurchaseOrder = (orderId: string, updates: Partial<PurchaseOrder>) => {
-      updatePurchaseOrder(orderId, updates);
-      setPurchaseOrders(getPurchaseOrders());
-  };
-
-  const handleUpdateWarehouses = (newWarehouses: Warehouse[]) => {
-    saveWarehouses(newWarehouses);
-    setWarehouses(newWarehouses);
-  };
-
-  const handleAddWarehouseTransfer = (transferData: Omit<WarehouseTransfer, 'id' | 'timestamp' | 'status'>) => {
-    addWarehouseTransfer(transferData);
-    setWarehouseTransfers(getWarehouseTransfers());
-    setInventoryTransactions(getInventoryTransactions()); // Refresh transactions
-    setMaterials(getMaterials()); // Refresh materials
-  };
-
-  const handleCompleteWarehouseTransfer = (transferId: string) => {
-    if (!currentUser) return;
-    completeWarehouseTransfer(transferId, currentUser.id);
-    setWarehouseTransfers(getWarehouseTransfers());
-    setInventoryTransactions(getInventoryTransactions());
-    setMaterials(getMaterials());
-  };
-
-const handleApplyAudit = (updates: { id: string; newStock: number; warehouseId: string }[], notes: string, warehouseId: string) => {
-    updates.forEach(update => {
-        const material = materials.find(m => m.id === update.id);
-        if (material && currentUser) {
-            const currentStock = (material.stock || {})[warehouseId] || 0;
-            const difference = update.newStock - currentStock;
-            if (difference !== 0) {
-                handleAddInventoryTransaction({
-                    materialId: update.id,
-                    type: 'adjustment_audit',
-                    quantity: difference,
-                    unitPrice: material.unitPrice, 
-                    notes: `Kiểm kê tại ${warehouses.find(w => w.id === warehouseId)?.name}: ${notes}`,
-                    staffId: currentUser.id,
-                    warehouseId: warehouseId,
-                });
-            }
-        }
-    });
-    showToast('Đã áp dụng kết quả kiểm kê và tạo phiếu điều chỉnh.', 'success');
-};
+    // Studio management states
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [studioStaff, setStudioStaff] = useState<StudioStaff[]>([]);
+    const [servicePackages, setServicePackages] = useState<ServicePackage[]>([]);
+    const [contracts, setContracts] = useState<Contract[]>([]);
+    const [postProductionProjects, setPostProductionProjects] = useState<PostProductionProject[]>([]);
+    const [studioAssets, setStudioAssets] = useState<StudioAsset[]>([]);
 
 
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-  
-  const toggleTheme = () => {
-    setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
-  };
+    const { showToast } = useToast();
 
-  const handleUpdatePassword = (oldPassword: string, newPassword: string): { success: boolean, message: string } => {
-    if (!currentUser) return { success: false, message: 'Bạn cần đăng nhập.' };
-    if (currentUser.password !== oldPassword) return { success: false, message: 'Mật khẩu cũ không đúng.'};
-
-    handleUpdateSingleUser(currentUser.id, { password: newPassword });
-
-    return { success: true, message: 'Đổi mật khẩu thành công!' };
-  };
-  
-  const handleLogin = async (username: string, password: string, rememberMe: boolean): Promise<{ success: boolean; message: string }> => {
-    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
-    if (user) {
-      setCurrentUser(user);
-      sessionStorage.setItem('loggedInUser_v1', JSON.stringify(user));
-      addRecentLogin(user.username);
-      navigateTo({ page: 'home' });
-      setIsAiChatbotOpen(true);
-      setIsInitialLogin(true);
-      
-      localStorage.setItem('lastLoggedInUser_v1', user.username);
-
-      if (rememberMe) {
-          localStorage.setItem('rememberedCredentials_v1', JSON.stringify({ username, password }));
-      } else {
-          localStorage.removeItem('rememberedCredentials_v1');
-      }
-
-      return { success: true, message: 'Đăng nhập thành công!' };
-    }
-    return { success: false, message: 'Tên đăng nhập hoặc mật khẩu không đúng.' };
-  };
-
-  const handleGoogleLogin = (credential: string) => {
-    try {
-        const decoded: any = jwtDecode(credential);
-        const { user, isNew } = findOrCreateUserByGoogle(decoded);
-        setCurrentUser(user);
-        sessionStorage.setItem('loggedInUser_v1', JSON.stringify(user));
-        addRecentLogin(user.username);
+    // Initial data loading
+    useEffect(() => {
+        // Basic data
         setUsers(getUsers());
+        setProducts(getProducts());
+        setCart(getCart());
+        setRequests(getPrintRequests());
+        setBankAccounts(getBankAccounts());
+        setPersonnelProfiles(getPersonnelProfiles());
+        setRewards(getRewards());
+        setVouchers(getVouchers());
+        
+        // Inventory data
+        setMaterials(getMaterials());
+        setProductBOMs(getProductBOMs());
+        setSuppliers(getSuppliers());
+        setInventoryTransactions(getInventoryTransactions());
+        setPurchaseOrders(getPurchaseOrders());
+        setWarehouses(getWarehouses());
+        setWarehouseTransfers(getWarehouseTransfers());
+        setExpenses(getExpenses());
+        setTimeClockEntries(getTimeClockEntries());
+        setStudioAssets(getStudioAssets());
+
+        // Catalog data
+        setProductBases(getProductBases());
+        setSizes(getSizes());
+        setServiceCategories(getServiceCategories());
+        setMaterialDefinitions(getMaterialDefinitions());
+        setMaterialUnits(getMaterialUnits());
+
+        // Studio management data
+        setServicePackages(getServicePackages());
+        setContracts(getContracts());
+        setPostProductionProjects(getPostProductionProjects());
+
+        // Check for logged-in user
+        const loggedInUser = localStorage.getItem('currentUser_v1');
+        if (loggedInUser) {
+            setCurrentUser(JSON.parse(loggedInUser));
+        }
+
+        // Theme
+        const savedTheme = localStorage.getItem('theme') as Theme;
+        if (savedTheme) setTheme(savedTheme);
+        else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) setTheme('dark');
+        
+        // Handle URL params for direct navigation
+        const params = new URLSearchParams(window.location.search);
+        const page = params.get('page');
+        const requestId = params.get('requestId');
+        const customerZalo = params.get('customerZalo');
+        const invoiceId = params.get('invoiceId');
+
+        if (page === 'debt_report' && customerZalo) {
+            setPageState({ page: 'debt_report', customerZalo });
+        } else if (page === 'invoice' && invoiceId) {
+            // This is handled by a separate HTML file, but good to have logic here
+        }
+
+    }, []);
+
+    // Derived State & Effects
+    useEffect(() => {
+      setIsAdminMode(currentUser?.purchasedPlans.includes('admin') || false);
+      if (currentUser) {
+          // Sync customers & staff for the current user
+          setCustomers(getCustomers(currentUser.id));
+          setStudioStaff(getStudioStaff(currentUser.id));
+      }
+    }, [currentUser]);
+
+    useEffect(() => {
+        if (isAdminMode) {
+            setNewPrintRequestsCount(requests.filter(r => r.workflowStatus === 'new').length);
+        }
+    }, [requests, isAdminMode]);
+
+    // Handlers
+    const navigateTo = (newState: PageState) => {
+        setPageState(newState);
+        window.scrollTo(0, 0);
+    };
+
+    const handleLogin = async (username: string, password: string, rememberMe: boolean): Promise<{ success: boolean; message: string; }> => {
+        const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
+        if (user) {
+            setCurrentUser(user);
+            localStorage.setItem('currentUser_v1', JSON.stringify(user));
+            localStorage.setItem('lastLoggedInUser_v1', user.username);
+            addRecentLogin(user.username);
+            
+            if (rememberMe) {
+                 localStorage.setItem('rememberedCredentials_v1', JSON.stringify({username, password}));
+            } else {
+                 localStorage.removeItem('rememberedCredentials_v1');
+            }
+            
+            navigateTo({ page: 'home' });
+            setIsChatbotOpen(true);
+            setIsInitialLogin(true);
+            return { success: true, message: 'Đăng nhập thành công!' };
+        }
+        return { success: false, message: 'Tên đăng nhập hoặc mật khẩu không đúng.' };
+    };
+
+    const handleLogout = () => {
+        setCurrentUser(null);
+        localStorage.removeItem('currentUser_v1');
         navigateTo({ page: 'home' });
-        setIsAiChatbotOpen(true);
-        setIsInitialLogin(true);
-        if (isNew) {
-            showToast('Tài khoản của bạn đã được tạo thành công!', 'success');
-        }
-    } catch (error) {
-        console.error("Google login failed", error);
-        showToast('Đăng nhập bằng Google thất bại.', 'error');
-    }
-  };
-  
-  const handleFaceLogin = (user: User) => {
-    setCurrentUser(user);
-    sessionStorage.setItem('loggedInUser_v1', JSON.stringify(user));
-    addRecentLogin(user.username);
-    navigateTo({ page: 'home' });
-    setIsAiChatbotOpen(true);
-    setIsInitialLogin(true);
-    showToast(`Chào mừng ${user.fullName} đã quay trở lại!`, 'success');
-  };
+    };
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    sessionStorage.removeItem('loggedInUser_v1');
-    // Keep last logged in user, but remove remembered credentials for security
-    const rememberedCreds = localStorage.getItem('rememberedCredentials_v1');
-    if (rememberedCreds) {
+    const handleRegister = async (username: string, password: string, fullName: string, zalo: string, email?: string, referredBy?: string): Promise<{ success: boolean; message: string; }> => {
+        if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+            return { success: false, message: 'Tên đăng nhập đã tồn tại.' };
+        }
+         if (users.some(u => u.zalo.trim() !== '' && u.zalo === zalo)) {
+            return { success: false, message: 'Số Zalo đã được đăng ký.' };
+        }
+
+        let referrer: User | undefined;
+        if (referredBy) {
+            referrer = users.find(u => u.referralCode === referredBy.toUpperCase());
+            if (!referrer) {
+                return { success: false, message: 'Mã giới thiệu không hợp lệ.' };
+            }
+        }
+        
+        // Determine if this is the first user registration.
+        const isFirstUser = users.length === 0;
+        const initialPlans: PlanId[] = isFirstUser ? ['admin'] : ['free'];
+
+        const newUser: User = { 
+            id: Date.now().toString(), 
+            username, 
+            password, 
+            fullName, 
+            zalo, 
+            email: email || '', 
+            purchasedPlans: initialPlans,
+            permissionOverrides: {}, 
+            points: 0, 
+            referralCode: Math.random().toString(36).substring(2,8).toUpperCase(), 
+            createdAt: Date.now(), 
+            referredBy: referrer?.referralCode 
+        };
+        
+        const updatedUsers = [...users, newUser];
+
+        if (referrer) {
+            const bonusPoints = loyaltySettings.referralBonusPoints;
+            newUser.points += bonusPoints;
+            const referrerIndex = updatedUsers.findIndex(u => u.id === referrer!.id);
+            if (referrerIndex > -1) {
+                updatedUsers[referrerIndex].points += bonusPoints;
+            }
+            showToast(`Bạn và người giới thiệu đã nhận được ${bonusPoints} điểm thưởng!`, 'success');
+        }
+
+        setUsers(updatedUsers);
+        saveUsers(updatedUsers);
+        
+        const successMessage = isFirstUser
+            ? 'Đăng ký thành công! Bạn là Quản trị viên đầu tiên của hệ thống.'
+            : 'Đăng ký thành công! Vui lòng đăng nhập.';
+
+        return { success: true, message: successMessage };
+    };
+
+    const handleGoogleLogin = (credential: string) => {
         try {
-            const { password, ...rest } = JSON.parse(rememberedCreds);
-            // This logic is now flawed because we're not storing password separately.
-            // Correct approach: just remove the whole thing on logout.
-        } catch(e) {}
-    }
-     localStorage.removeItem('rememberedCredentials_v1');
-
-    navigateTo({ page: 'home' });
-  };
-  
-  const handleRegister = async (username: string, password: string, fullName: string, zalo: string, email?: string, referredBy?: string): Promise<{ success: boolean; message: string }> => {
-    const existingUser = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (existingUser) {
-        return { success: false, message: 'Tên đăng nhập đã tồn tại.' };
-    }
-
-    let referralBonusApplied = false;
-    let newUsers = [...users];
-    const isFirstUser = newUsers.length === 0;
-
-    if (referredBy) {
-        const referrerIndex = newUsers.findIndex(u => u.referralCode.toUpperCase() === referredBy.toUpperCase());
-        if (referrerIndex !== -1) {
-            const referrer = { ...newUsers[referrerIndex] };
-            referrer.points = (referrer.points || 0) + loyaltySettings.referralBonusPoints;
-            newUsers[referrerIndex] = referrer;
-            referralBonusApplied = true;
-        } else {
-            showToast('Mã giới thiệu không hợp lệ.', 'error');
-        }
-    }
-
-    const newUser: User = {
-        id: Date.now().toString(),
-        username,
-        password,
-        fullName,
-        zalo,
-        email,
-        purchasedPlans: isFirstUser ? ['admin'] : ['free'],
-        operationalRole: isFirstUser ? 'tong_giam_doc' : null,
-        permissionOverrides: {},
-        points: referralBonusApplied ? loyaltySettings.referralBonusPoints : 0,
-        referralCode: generateReferralCode(),
-        referredBy: referralBonusApplied ? referredBy.toUpperCase() : undefined,
-        createdAt: Date.now(),
-    };
-
-    newUsers.push(newUser);
-
-    if (isFirstUser) {
-        const paymentScreenUser: User = {
-            id: 'system-payment-screen',
-            username: 'manhinhthanhtoan',
-            password: '123456',
-            fullName: 'Màn hình Thanh toán',
-            zalo: '0000000000',
-            purchasedPlans: ['free'],
-            permissionOverrides: {},
-            points: 0,
-            referralCode: 'SYSTEM',
-            createdAt: Date.now(),
-        };
-        newUsers.push(paymentScreenUser);
-    }
-
-    handleUpdateUsers(newUsers);
-    
-    return { success: true, message: 'Đăng ký thành công! Bạn sẽ được chuyển đến trang đăng nhập.' };
-  };
-
-  const handlePurchaseRequest = (planId: PlanId) => {
-    if (!currentUser) {
-        navigateTo({ page: 'login' });
-        return;
-    }
-    setPaymentPlan(planId);
-  };
-
-  const handleSinglePhotoDownloadRequest = (imageUrl: string) => {
-    if (!imageUrl) {
-        showToast('Lỗi: không tìm thấy ảnh gốc.', 'error');
-        return;
-    }
-    setImageToDownloadUrl(imageUrl);
-    setPaymentPlan('single_photo_download');
-  };
-  
-  const handlePrintRequest = (imageUrl: string, sourceTool: string) => {
-    setPrintOrderData({ imageUrl, sourceTool });
-    setIsPrintOrderModalOpen(true);
-  };
-
-  const handlePrintRequestWithLoginCheck = (imageUrl: string, sourceTool: string) => {
-    if (!currentUser) {
-        showToast('Vui lòng đăng nhập để gửi yêu cầu in.', 'info');
-        navigateTo({ page: 'login' });
-        return;
-    }
-    handlePrintRequest(imageUrl, sourceTool);
-  };
-
-  const handlePrintOrderSubmit = (orderDetails: PrintOrderDetails) => {
-    if (!printOrderData || !currentUser) return;
-    addPrintRequest({
-        imageUrl: printOrderData.imageUrl,
-        sourceTool: printOrderData.sourceTool,
-        userId: currentUser.id,
-        username: currentUser.username,
-        orderDetails,
-    });
-    setPrintOrderData(null);
-    setIsPrintOrderModalOpen(false);
-    showToast('Đã gửi yêu cầu in thành công!', 'success');
-    setPrintRequests(getPrintRequests());
-  };
-  
-  const renderTool = (toolId: string) => {
-    // Open access for all users, including guests
-    switch (toolId) {
-      case 'introduction': return <Introduction navigateTo={navigateTo} currentUser={currentUser} />;
-      case 'idPhoto': return <IdPhotoGenerator currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} onSinglePhotoDownloadRequest={handleSinglePhotoDownloadRequest} />;
-      case 'photoRestorer': return <PhotoRestorer currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} onSinglePhotoDownloadRequest={handleSinglePhotoDownloadRequest} />;
-      case 'proAiRelight': return <ProAiRelight currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} />;
-      case 'imageGenerator': return <ImageGenerator currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} />;
-      case 'conceptPhoto': return <ConceptPhotoGenerator currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} />;
-      case 'familyPhotoComposer': return <FamilyPhotoComposer currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} />;
-      case 'socialMediaPostGenerator': return <SocialMediaPostGenerator currentUser={currentUser} />;
-      case 'photoLab': return <PhotoLab currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} onSinglePhotoDownloadRequest={handleSinglePhotoDownloadRequest} />;
-      case 'batchColorCorrector': return <BatchColorCorrector currentUser={currentUser} onPrintRequest={handlePrintRequestWithLoginCheck} />;
-      default: 
-        return <Introduction navigateTo={navigateTo} currentUser={currentUser} />;
-    }
-  };
-  
-    // --- Admin Action Handlers ---
-    const handleAddUser = async (username: string, password: string, plan: PlanId, fullName: string, zalo: string, isVip: boolean, email?: string, referredBy?: string): Promise<{ success: boolean; message: string }> => {
-        const existing = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-        if (existing) return { success: false, message: 'Tên đăng nhập đã tồn tại.' };
-
-        const newUser: User = {
-            id: `user-${Date.now()}`,
-            username, password, fullName, zalo, email,
-            purchasedPlans: [plan],
-            permissionOverrides: {},
-            isVipCustomer: isVip,
-            points: 0,
-            referralCode: generateReferralCode(),
-            createdAt: Date.now(),
-        };
-        handleUpdateUsers([...users, newUser]);
-        showToast('Thêm thành viên mới thành công!', 'success');
-        return { success: true, message: 'Thành công' };
-    };
-
-    const handleDeleteUser = (userId: string) => {
-        if (window.confirm('Bạn có chắc muốn xóa thành viên này?')) {
-            handleUpdateUsers(users.filter(u => u.id !== userId));
-            showToast('Đã xóa thành viên.', 'success');
-        }
-    };
-
-    const handleConfirmPayment = (userId: string) => {
-        const user = users.find(u => u.id === userId);
-        if (user && user.pendingPayment) {
-            handleUpdateSingleUser(userId, {
-                purchasedPlans: [...user.purchasedPlans, user.pendingPayment.planId],
-                pendingPayment: undefined
-            });
-            showToast('Xác nhận thanh toán thành công!', 'success');
+            const decoded: any = jwtDecode(credential);
+            const { user, isNew } = findOrCreateUserByGoogle(decoded);
+            setCurrentUser(user);
+            localStorage.setItem('currentUser_v1', JSON.stringify(user));
+            navigateTo({ page: 'home' });
+            if (isNew) {
+                showToast(`Chào mừng ${user.fullName}! Tài khoản của bạn đã được tạo.`, 'success');
+            } else {
+                showToast(`Chào mừng quay trở lại, ${user.fullName}!`, 'success');
+            }
+        } catch (error) {
+            console.error("Google login error", error);
+            showToast('Đăng nhập Google thất bại.', 'error');
         }
     };
     
-    const handleRejectPayment = (userId: string) => {
-        handleUpdateSingleUser(userId, { pendingPayment: undefined });
-        showToast('Đã từ chối thanh toán.', 'info');
+    // All other state update handlers...
+    const handleUpdatePlans = (newPlans: PlanDetailsTable) => { setPlans(newPlans); savePlans(newPlans); };
+    const handleUpdatePermissions = (newPermissions: PermissionsTable) => { setPermissions(newPermissions); savePermissions(newPermissions); };
+    const handleUpdatePrices = (newPrices: PricingTable) => { setPrices(newPrices); savePrices(newPrices); };
+    const handleUpdateProducts = (newProducts: Product[]) => { setProducts(newProducts); saveProducts(newProducts); };
+    const handleCartUpdate = (updatedCart: CartItem[]) => { setCart(updatedCart); saveCart(updatedCart); };
+    const handleAddToCart = (productId: string, quantity: number) => { handleCartUpdate(addToCart(productId, quantity)); showToast('Đã thêm vào giỏ hàng!', 'success'); };
+    const handleUpdateCartQuantity = (productId: string, quantity: number) => { handleCartUpdate(updateCartQuantity(productId, quantity)); };
+    const handleRemoveFromCart = (productId: string) => { handleCartUpdate(removeFromCart(productId)); };
+    
+    const handlePurchaseRequest = (planId: PlanId) => {
+        if (!currentUser) { navigateTo({ page: 'login' }); return; }
+        if (planId === 'single_photo_download' && isMockPayment) { setIsMockPayment(true); return; }
+        setShowPaymentModal(planId);
     };
 
-    const handleLabUpdateRequest = (requestId: string, updates: Partial<Omit<PrintRequest, 'id'>>, actionDescription: string) => {
+    const handleBillSubmit = (planId: PlanId, billUrl: string) => {
         if (!currentUser) return;
-        updatePrintRequest(requestId, updates, currentUser, actionDescription);
-        setPrintRequests(getPrintRequests()); // Refresh
+        const newRequest: Omit<PrintRequest, 'id'|'timestamp'|'workflowStatus'|'workInProgress'|'history'> = {
+            imageUrl: billUrl,
+            sourceTool: `bill_payment_${planId}`,
+            userId: currentUser.id,
+            username: currentUser.username,
+            orderDetails: { customerInfo: { fullName: currentUser.fullName, zalo: currentUser.zalo } }
+        };
+        addPrintRequest(newRequest);
+        
+        const updatedUser = { ...currentUser, pendingPayment: { planId, hasBill: true } };
+        handleUpdateUser(currentUser.id, { pendingPayment: { planId, hasBill: true } });
+        setCurrentUser(updatedUser);
+
+        setShowPaymentModal(null);
+        showToast('Đã gửi bill thanh toán! Vui lòng chờ admin xác nhận.', 'info');
     };
     
-    const handleApplyVoucher = async (requestId: string, voucherCode: string): Promise<{ success: boolean; message: string; }> => {
-        const request = printRequests.find(r => r.id === requestId);
-        const voucher = vouchers.find(v => v.code.toUpperCase() === voucherCode.toUpperCase() && v.status === 'active');
+    const handleUpdateUser = (userId: string, updates: Partial<User>) => {
+        const newUsers = users.map(u => u.id === userId ? { ...u, ...updates } : u);
+        setUsers(newUsers);
+        saveUsers(newUsers);
+        if (currentUser && currentUser.id === userId) {
+            const updatedCurrentUser = { ...currentUser, ...updates };
+            setCurrentUser(updatedCurrentUser);
+            localStorage.setItem('currentUser_v1', JSON.stringify(updatedCurrentUser));
+        }
+    };
+    
+    const handleManualPointUpdate = (userId: string, points: number, reason: string) => {
+        const newUsers = users.map(u => {
+            if (u.id === userId) {
+                const newPoints = (u.points || 0) + Number(points);
+                showToast(`Đã cập nhật điểm cho ${u.fullName}. Điểm mới: ${newPoints}. Lý do: ${reason}`, 'success');
+                return { ...u, points: newPoints };
+            }
+            return u;
+        });
+        setUsers(newUsers);
+        saveUsers(newUsers);
+        if (currentUser && currentUser.id === userId) {
+            const updatedCurrentUser = newUsers.find(u => u.id === userId);
+            if(updatedCurrentUser) {
+                setCurrentUser(updatedCurrentUser);
+                localStorage.setItem('currentUser_v1', JSON.stringify(updatedCurrentUser));
+            }
+        }
+    };
 
-        if (!request) return { success: false, message: 'Không tìm thấy đơn hàng.' };
-        if (!voucher) return { success: false, message: 'Mã voucher không hợp lệ hoặc đã hết hạn.' };
+    const handleApplyVoucher = async (requestId: string, voucherCode: string): Promise<{ success: boolean; message: string; }> => {
+        const formatCurrency = (value: number) => new Intl.NumberFormat('vi-VN').format(value);
+        const voucher = vouchers.find(v => v.code.toUpperCase() === voucherCode.toUpperCase() && v.status === 'active');
+        if (!voucher) {
+            return { success: false, message: 'Mã voucher không hợp lệ hoặc đã được sử dụng.' };
+        }
+
+        const request = requests.find(r => r.id === requestId);
+        if (!request) {
+            return { success: false, message: 'Không tìm thấy đơn hàng.' };
+        }
 
         let discountAmount = 0;
-        let freeProductItems: ManualOrderItem[] = [];
-        
-        if(voucher.rewardId) { // Redeemed reward
-            const reward = rewards.find(r => r.id === voucher.rewardId);
-            if (!reward) return { success: false, message: 'Lỗi: Không tìm thấy phần thưởng tương ứng.'};
-            if(reward.type === 'discount') {
-                discountAmount = reward.value as number;
-            } else if (reward.type === 'product') {
-                const product = products.find(p => p.id === reward.value);
-                if(product) {
-                    freeProductItems.push({ productCode: product.id, productName: `${product.name} (Quà tặng)`, size: '', quantity: 1, unitPrice: 0 });
-                }
-            }
-        } else { // Promo campaign voucher
-            if(voucher.discountType === 'fixed_amount') {
-                discountAmount = voucher.discountValue || 0;
-            } else if (voucher.discountType === 'percentage') {
-                discountAmount = (request.totalAmount || 0) * (voucher.discountValue || 0) / 100;
-            }
+        if (voucher.discountType === 'fixed_amount' && voucher.discountValue) {
+            discountAmount = voucher.discountValue;
+        } else if (voucher.discountType === 'percentage' && voucher.discountValue) {
+            const baseTotal = request.manualOrderItems
+                ? request.manualOrderItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
+                : (request.orderDetails.totalPrice || 0);
+            const additionalTotal = (request.additionalCosts || []).reduce((sum, item) => sum + item.amount, 0);
+            const preDiscountTotal = baseTotal + additionalTotal;
+            discountAmount = preDiscountTotal * (voucher.discountValue / 100);
         }
 
-        const updatedRequest = { ...request, voucherCode, discountAmount, freeProductItems };
-        updatePrintRequest(requestId, updatedRequest, currentUser, `Áp dụng voucher ${voucherCode}`);
-        setPrintRequests(getPrintRequests());
+        if (discountAmount <= 0) {
+            return { success: false, message: 'Voucher không thể áp dụng.' };
+        }
 
-        const updatedVoucher = {...voucher, status: 'used' as 'used'};
-        handleUpdateVouchers(vouchers.map(v => v.id === updatedVoucher.id ? updatedVoucher : v));
+        // Update request with discount
+        updatePrintRequest(requestId, { discountAmount, voucherCode }, currentUser, `Áp dụng voucher ${voucherCode}`);
+        setRequests(getPrintRequests()); // Refresh state
 
-        return { success: true, message: `Áp dụng voucher thành công! Giảm ${formatCurrency(discountAmount)}` };
+        // Mark voucher as used
+        const updatedVouchers = vouchers.map(v => v.id === voucher.id ? { ...v, status: 'used' as 'used' } : v);
+        setVouchers(updatedVouchers);
+        saveVouchers(updatedVouchers);
+        
+        return { success: true, message: `Áp dụng voucher thành công! Giảm ${formatCurrency(discountAmount)}đ.` };
     };
-    
-    const handleAddTimeClockEntry = (userId: string, type: 'clock_in' | 'clock_out', photoDataUrl: string) => {
-        addTimeClockEntry({ userId, type, photoDataUrl, timestamp: Date.now() });
-        setTimeClockEntries(getTimeClockEntries());
-        showToast(`Đã chấm công ${type === 'clock_in' ? 'vào' : 'ra'} thành công!`, 'success');
-        navigateTo({ page: 'user_management' }); // Go back to admin to see the log
-    };
 
 
-  const isFullScreenPage = pageState.page === 'wedding_manager' || pageState.page === 'studio_hub';
-
-  const renderContent = () => {
-    switch (pageState.page) {
-      case 'home': return <HomePage navigateTo={navigateTo} isAdminMode={isAdmin} currentUser={currentUser} prices={prices} products={products} />;
-      case 'login': return <LoginPage onLogin={handleLogin} navigateTo={navigateTo} onGoogleLogin={handleGoogleLogin} onFaceLogin={handleFaceLogin} users={users} />;
-      case 'register': return <RegisterPage onRegister={handleRegister} navigateTo={navigateTo} onGoogleLogin={handleGoogleLogin} />;
-      case 'tool': return renderTool(pageState.toolId);
-      case 'service': return <ServicePage serviceId={pageState.serviceId} navigateTo={navigateTo} isAdminMode={isAdmin} currentUser={currentUser} prices={prices} products={products} />;
-      case 'product': return <ProductPage productId={pageState.productId} serviceId={pageState.serviceId} navigateTo={navigateTo} isAdminMode={isAdmin} currentUser={currentUser} prices={prices} products={products} onAddToCart={handleAddToCart} />;
-      case 'blog': return <BlogPage navigateTo={navigateTo} />;
-      case 'blog_post': return <BlogPostPage postId={pageState.postId} navigateTo={navigateTo} />;
-      case 'pricing': return <PricingPage currentUser={currentUser} onPurchaseRequest={handlePurchaseRequest} navigateTo={navigateTo} plans={plans} />;
-      case 'promotions': return <PromotionsPage navigateTo={navigateTo} isAdminMode={isAdmin} />;
-      case 'user_management': return isAdmin && <UserManagementPage 
-        users={users} 
-        currentUser={currentUser}
-        onAddUser={handleAddUser}
-        onDeleteUser={handleDeleteUser}
-        onUpdateUser={handleUpdateSingleUser}
-        onConfirmPayment={handleConfirmPayment}
-        onRejectPayment={handleRejectPayment}
-        navigateTo={navigateTo}
-        personnelProfiles={personnelProfiles}
-        onUpdatePersonnelProfile={handleUpdatePersonnelProfile}
-        loyaltySettings={loyaltySettings}
-        onUpdateLoyaltySettings={handleUpdateLoyaltySettings}
-        onManualPointUpdate={handleManualPointUpdate}
-        rewards={rewards}
-        onUpdateRewards={handleUpdateRewards}
-        products={products}
-        bankAccounts={bankAccounts}
-        onUpdateBankAccounts={(b) => { saveBankAccounts(b); setBankAccounts(b); }}
-        materials={materials}
-        onUpdateMaterials={(m) => { saveMaterials(m); setMaterials(m); }}
-        productBOMs={productBOMs}
-        onUpdateProductBOMs={(b) => { saveProductBOMs(b); setProductBOMs(b); }}
-        timeClockEntries={timeClockEntries}
-        requests={printRequests}
-        expenses={expenses}
-        onAddExpense={handleAddExpense}
-        suppliers={suppliers}
-        onUpdateSuppliers={handleUpdateSuppliers}
-        transactions={inventoryTransactions}
-        onAddTransaction={handleAddInventoryTransaction}
-        sizes={sizes}
-        purchaseOrders={purchaseOrders}
-        onAddPurchaseOrder={handleAddPurchaseOrder}
-        onUpdatePurchaseOrder={handleUpdatePurchaseOrder}
-        warehouses={warehouses}
-        onUpdateWarehouses={handleUpdateWarehouses}
-        warehouseTransfers={warehouseTransfers}
-        onAddWarehouseTransfer={handleAddWarehouseTransfer}
-        onCompleteWarehouseTransfer={handleCompleteWarehouseTransfer}
-        onApplyAudit={handleApplyAudit}
-      />;
-      case 'print_queue': return isAdmin && <PrintQueuePage navigateTo={navigateTo} />;
-      case 'print_order': return <PrintOrderPage requestId={pageState.requestId} navigateTo={navigateTo} />;
-      case 'main_products': return <MainProductsPage navigateTo={navigateTo} isAdminMode={isAdmin} />;
-      case 'pricing_management': return isAdmin && <PricingManagementPage navigateTo={navigateTo} prices={prices} onUpdatePrices={handleUpdatePrices} products={products} />;
-      case 'plan_management': return isAdmin && <PlanManagementPage navigateTo={navigateTo} plans={plans} onUpdatePlans={handleUpdatePlans} />;
-      case 'product_management': return isAdmin && <ProductManagementPage products={products} onUpdateProducts={handleUpdateProducts} navigateTo={navigateTo} productBases={productBases} sizes={sizes} serviceCategories={serviceCategories} materials={materials} productBOMs={productBOMs} onUpdateProductBOMs={(b) => { saveProductBOMs(b); setProductBOMs(b);}} />;
-      case 'catalog_management': return isAdmin && <CatalogManagementPage productBases={productBases} sizes={sizes} serviceCategories={serviceCategories} onUpdateProductBases={handleUpdateProductBases} onUpdateSizes={handleUpdateSizes} onUpdateServiceCategories={handleUpdateServiceCategories} navigateTo={navigateTo} />;
-      case 'my_account': return currentUser && <MyAccountPage currentUser={currentUser} rewards={rewards} vouchers={vouchers.filter(v => v.userId === currentUser.id)} products={products} onRedeemReward={handleRedeemReward} onUpdateUser={(updates) => handleUpdateSingleUser(currentUser.id, updates)} onUpdatePassword={handleUpdatePassword} />;
-      case 'inventory_management': return isAdmin && currentUser && <InventoryManagementPage navigateTo={navigateTo} materials={materials} onUpdateMaterials={(m) => { saveMaterials(m); setMaterials(m); }} onApplyAudit={handleApplyAudit} currentUser={currentUser} suppliers={suppliers} onUpdateSuppliers={handleUpdateSuppliers} transactions={inventoryTransactions} onAddTransaction={handleAddInventoryTransaction} sizes={sizes} purchaseOrders={purchaseOrders} onAddPurchaseOrder={handleAddPurchaseOrder} onUpdatePurchaseOrder={handleUpdatePurchaseOrder} warehouses={warehouses} onUpdateWarehouses={handleUpdateWarehouses} warehouseTransfers={warehouseTransfers} onAddWarehouseTransfer={handleAddWarehouseTransfer} onCompleteWarehouseTransfer={handleCompleteWarehouseTransfer}/>;
-      case 'time_clock': return currentUser && <TimeClockPage currentUser={currentUser} onAddTimeClockEntry={handleAddTimeClockEntry} />;
-      case 'lab_operation': return currentUser && (currentUser.operationalRole || isAdmin) && <LabOperationPage currentUser={currentUser} requests={printRequests} onUpdateRequest={handleLabUpdateRequest} navigateTo={navigateTo} onRefreshRequests={() => setPrintRequests(getPrintRequests())} prices={prices} users={users} products={products} onApplyVoucher={handleApplyVoucher} bankAccounts={bankAccounts} expenses={expenses} materials={materials} productBOMs={productBOMs} />;
-      case 'schedule': return currentUser && (currentUser.operationalRole === 'tong_giam_doc' || isAdmin) && <SchedulePage currentUser={currentUser}/>;
-      case 'community': return currentUser && <CommunityPage currentUser={currentUser} users={users} navigateTo={navigateTo} initialSelectedUserId={pageState.selectedUserId} requests={printRequests} />;
-      case 'studio_hub': return currentUser && (isAdmin || currentUser.operationalRole) && ( <StudioManagementHub onSelectManager={(manager) => { if (manager === 'wedding') { navigateTo({ page: 'wedding_manager' }); } }} /> );
-      case 'wedding_manager': return currentUser && (isAdmin || currentUser.operationalRole) && (
-          <WeddingStudioManager 
-              currentUser={currentUser}
-              onBackToHub={() => navigateTo({ page: 'studio_hub'})}
-              customers={customers}
-              onUpdateCustomer={handleUpdateCustomer}
-              onAddCustomer={handleAddCustomer}
-              studioStaff={studioStaff}
-              servicePackages={servicePackages}
-              contracts={contracts}
-              onUpdatePackages={handleUpdateServicePackages}
-              onUpdateContracts={handleUpdateContracts}
-              onAddPayment={handleAddPaymentToContract}
-              expenses={expenses}
-              onAddExpense={handleAddExpense}
-              personnelProfiles={personnelProfiles}
-              timeClockEntries={timeClockEntries}
-              onUpdatePersonnelProfile={handleUpdatePersonnelProfile}
-              postProductionProjects={postProductionProjects}
-              onUpdatePostProductionProject={handleUpdatePostProductionProject}
-              studioAssets={studioAssets}
-              onUpdateStudioAsset={handleUpdateStudioAsset}
-              onAddAssetLog={handleAddAssetLog}
-              vouchers={vouchers}
-              onAddVoucher={handleAddVoucher}
-              products={products}
-              materials={materials}
-              productBOMs={productBOMs}
-              requests={printRequests}
-              onUpdateUser={handleUpdateSingleUser}
-              users={users}
-          />
-      );
-      case 'search_results': return <SearchResultsPage query={pageState.query} products={products} navigateTo={navigateTo} prices={prices} currentUser={currentUser} />;
-      case 'cart': return <CartPage cart={cart} products={products} onUpdateQuantity={handleUpdateCartQuantity} onRemove={handleRemoveFromCart} navigateTo={navigateTo} prices={prices} currentUser={currentUser} />;
-      default: return <HomePage navigateTo={navigateTo} isAdminMode={isAdmin} currentUser={currentUser} prices={prices} products={products} />;
-    }
-  };
-  
-  return (
-    <div className={`${theme}`}>
-      <div className={`bg-emerald-50 dark:bg-emerald-950 text-slate-800 dark:text-zinc-200 ${isFullScreenPage ? 'h-screen' : 'min-h-screen'}`}>
-        {!isFullScreenPage && <Header 
-            currentUser={currentUser}
-            handleLogout={handleLogout}
-            navigateTo={navigateTo}
-            theme={theme}
-            toggleTheme={toggleTheme}
-            isAdmin={isAdmin}
-            newPrintRequestsCount={printRequests.filter(r => r.status === 'new').length}
-            pageState={pageState}
-            cartItemCount={cart.reduce((sum, item) => sum + item.quantity, 0)}
-        />}
-
-        <Suspense fallback={<div className="flex justify-center items-center h-screen"><Loader /></div>}>
-            {renderContent()}
-        </Suspense>
-
-        {paymentPlan && (
-            <PaymentModal
-                planId={paymentPlan}
-                onClose={() => setPaymentPlan(null)}
-                plans={plans}
-                bankAccounts={bankAccounts}
-                onBillSubmit={(planId, billUrl) => {
-                    if (planId === 'single_photo_download') {
-                        if (imageToDownloadUrl) {
-                            const link = document.createElement('a');
-                            link.href = imageToDownloadUrl;
-                            link.download = `thaoanhphotolab-${Date.now()}.png`;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            
-                            showToast('Thanh toán thành công! Ảnh của bạn đang được tải về.', 'success');
-                            
-                            setImageToDownloadUrl(null);
-                            setPaymentPlan(null);
-                        } else {
-                            showToast('Lỗi: Không tìm thấy ảnh để tải về.', 'error');
-                            setPaymentPlan(null);
-                        }
-                    } else if (currentUser) {
-                        handleUpdateSingleUser(currentUser.id, { pendingPayment: { planId, hasBill: true } });
-                        showToast('Đã gửi bill thành công! Quản trị viên sẽ sớm xác nhận.', 'success');
-                        setPaymentPlan(null);
+    const allProps = {
+        // Pass all state and handlers down to pages
+        currentUser, users, products, prices, plans, permissions, cart, requests, bankAccounts, personnelProfiles, loyaltySettings, rewards, vouchers, materials, productBOMs, suppliers, inventoryTransactions, purchaseOrders, warehouses, warehouseTransfers, expenses, timeClockEntries, productBases, sizes, serviceCategories, materialDefinitions, materialUnits, customers, studioStaff, servicePackages, contracts, postProductionProjects, studioAssets,
+        navigateTo, isAdminMode,
+        onUpdateUser: handleUpdateUser,
+        onUpdateProducts: (p: Product[]) => { setProducts(p); saveProducts(p); },
+        onUpdatePrices: handleUpdatePrices,
+        onUpdatePlans: handleUpdatePlans,
+        onUpdatePermissions: handleUpdatePermissions,
+        onAddToCart: handleAddToCart,
+        onUpdateCartQuantity: handleUpdateCartQuantity,
+        onRemoveFromCart: handleRemoveFromCart,
+        onApplyVoucher: handleApplyVoucher,
+        onManualPointUpdate: handleManualPointUpdate,
+        onAddUser: async (username: string, password: string, plan: PlanId, fullName: string, zalo: string, isVip: boolean): Promise<{ success: boolean; message: string; }> => {
+            if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+                return { success: false, message: 'Tên đăng nhập đã tồn tại.' };
+            }
+            const newUser: User = { id: Date.now().toString(), username, password, fullName, zalo, email: '', purchasedPlans: [plan], permissionOverrides: {}, isVipCustomer: isVip, points: 0, referralCode: Math.random().toString(36).substring(2,8).toUpperCase(), createdAt: Date.now() };
+            const updatedUsers = [...users, newUser];
+            setUsers(updatedUsers);
+            saveUsers(updatedUsers);
+            return { success: true, message: 'Thêm thành công!' };
+        },
+        onDeleteUser: (userId: string) => {
+            if (currentUser?.id === userId || users.find(u => u.id === userId)?.purchasedPlans.includes('admin')) {
+                showToast('Không thể xóa tài khoản admin hoặc chính bạn.', 'error');
+                return;
+            }
+            if (window.confirm('Bạn có chắc muốn xóa người dùng này?')) {
+                const newUsers = users.filter(u => u.id !== userId);
+                setUsers(newUsers);
+                saveUsers(newUsers);
+                showToast('Đã xóa người dùng.', 'success');
+            }
+        },
+        onUpdatePersonnelProfile: (userId: string, profile: PersonnelProfile) => {
+            const newProfiles = personnelProfiles.filter(p => p.userId !== userId);
+            newProfiles.push(profile);
+            setPersonnelProfiles(newProfiles);
+            savePersonnelProfiles(newProfiles);
+            showToast('Đã cập nhật hồ sơ nhân sự.', 'success');
+        },
+         onPrintRequest: (imageDataUrl: string, sourceTool: string) => {
+            if (!currentUser) { navigateTo({ page: 'login' }); return; }
+            setPageState({ page: 'print_order_modal', imageUrl: imageDataUrl, sourceTool });
+        },
+         onSinglePhotoDownloadRequest: () => {
+             handlePurchaseRequest('single_photo_download');
+        },
+        // ... all other handlers
+        onUpdateLoyaltySettings: (settings: LoyaltySettings) => { setLoyaltySettings(settings); saveLoyaltySettings(settings); showToast('Đã lưu cài đặt Loyalty!', 'success'); },
+        onUpdateRewards: (newRewards: Reward[]) => { setRewards(newRewards); saveRewards(newRewards); },
+        onUpdateBankAccounts: (accounts: BankAccount[]) => { setBankAccounts(accounts); saveBankAccounts(accounts); },
+        onAddExpense: (expense: Omit<Expense, 'id'>) => { addExpenseToStore(expense); setExpenses(getExpenses()); showToast('Đã thêm chi phí.', 'success'); },
+        onUpdateMaterials: (mats: Material[]) => { setMaterials(mats); saveMaterials(mats); },
+        onApplyAudit: (updates: { id: string; newStock: number, warehouseId: string }[], notes: string, warehouseId: string) => {
+             updates.forEach(update => {
+                const material = materials.find(m => m.id === update.id);
+                if (material) {
+                    const currentStock = (material.stock || {})[warehouseId] || 0;
+                    const difference = update.newStock - currentStock;
+                    if (difference !== 0) {
+                        addInventoryTransaction({ materialId: update.id, type: 'adjustment_audit', quantity: difference, unitPrice: material.unitPrice, notes: `Kiểm kê tại ${warehouses.find(w => w.id === warehouseId)?.name}: ${notes}`, staffId: currentUser!.id, warehouseId: warehouseId });
                     }
-                }}
-            />
-        )}
+                }
+            });
+            setMaterials(getMaterials());
+            setInventoryTransactions(getInventoryTransactions());
+            showToast('Đã áp dụng kết quả kiểm kê.', 'success');
+        },
+        onUpdateSuppliers: (s: Supplier[]) => { setSuppliers(s); saveSuppliers(s); },
+        onAddTransaction: (t: Omit<InventoryTransaction, 'id' | 'timestamp'>) => { addInventoryTransaction(t); setInventoryTransactions(getInventoryTransactions()); setMaterials(getMaterials()); },
+        onAddPurchaseOrder: (po: Omit<PurchaseOrder, 'id'|'timestamp'>) => { addPurchaseOrder(po); setPurchaseOrders(getPurchaseOrders()); },
+        onUpdatePurchaseOrder: (id: string, updates: Partial<PurchaseOrder>) => { updatePurchaseOrder(id, updates); setPurchaseOrders(getPurchaseOrders()); },
+        onUpdateWarehouses: (w: Warehouse[]) => { setWarehouses(w); saveWarehouses(w); },
+        onAddWarehouseTransfer: (t: Omit<WarehouseTransfer, 'id'|'timestamp'|'status'>) => { addWarehouseTransfer(t); setWarehouseTransfers(getWarehouseTransfers()); setMaterials(getMaterials()); },
+        onCompleteWarehouseTransfer: (id: string) => { completeWarehouseTransfer(id, currentUser!.id); setWarehouseTransfers(getWarehouseTransfers()); setMaterials(getMaterials()); },
+        onUpdateProductBOMs: (b: ProductBOM[]) => { setProductBOMs(b); saveProductBOMs(b); },
 
-        {isPrintOrderModalOpen && printOrderData && (
-          <PrintOrderPage
-            imageUrl={printOrderData.imageUrl}
-            sourceTool={printOrderData.sourceTool}
-            currentUser={currentUser}
-            onClose={() => setIsPrintOrderModalOpen(false)}
-            onSubmit={handlePrintOrderSubmit}
-          />
-        )}
+        // Catalogs
+        onUpdateProductBases: (d: string[]) => { setProductBases(d); saveProductBases(d); },
+        onUpdateSizes: (d: string[]) => { setSizes(d); saveSizes(d); },
+        onUpdateServiceCategories: (d: string[]) => { setServiceCategories(d); saveServiceCategories(d); },
+        onUpdateMaterialDefinitions: (d: MaterialDefinition[]) => { setMaterialDefinitions(d); saveMaterialDefinitions(d); },
+        onUpdateMaterialUnits: (d: string[]) => { setMaterialUnits(d); saveMaterialUnits(d); },
+
+        // CRM
+        onUpdateCustomer: (customer: Customer) => { setCustomers(updateCustomerInStore(currentUser!.id, customer)); },
+        onAddCustomer: (customerData: Omit<Customer, 'id' | 'createdAt' | 'interactions'>) => { addCustomerToStore(currentUser!.id, customerData); setCustomers(getCustomers(currentUser!.id)); },
+
+        // Contracts
+        onUpdatePackages: (pkgs: ServicePackage[]) => { setServicePackages(pkgs); saveServicePackages(pkgs); },
+        onUpdateContracts: (c: Contract[]) => { setContracts(c); saveContracts(c); },
+        onAddPayment: (contractId: string, amount: number, date: string, method: string, notes?: string) => {
+            const payment: Payment = { amount, date, method, notes };
+            setContracts(addPaymentToContract(contractId, payment));
+            showToast('Đã ghi nhận thanh toán!', 'success');
+        },
         
-        {!isFullScreenPage && isAiChatbotOpen && <AiChatbot onClose={() => setIsAiChatbotOpen(false)} isInitialLogin={isInitialLogin} currentUser={currentUser} />}
-        
-        {!isFullScreenPage && !isAiChatbotOpen && (
-             <button
-                onClick={() => setIsAiChatbotOpen(true)}
-                className="fixed bottom-4 right-4 z-[99] w-16 h-16 bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-purple-700 transition-transform hover:scale-110 animate-subtle-bob"
-            >
-                <AiAssistantIcon className="w-8 h-8"/>
-            </button>
-        )}
+        // Post-production
+        onUpdatePostProductionProject: (project: PostProductionProject) => { updatePostProductionProject(project); setPostProductionProjects(getPostProductionProjects()); },
 
-        {!isFullScreenPage && <Footer />}
-        {!isFullScreenPage && <ContactFAB />}
-        <ToastContainer />
-      </div>
-    </div>
-  );
-}
+        // Studio Assets
+        onUpdateStudioAsset: (asset: StudioAsset) => {
+            let assetExists = studioAssets.some(a => a.id === asset.id);
+            const newAssets = assetExists ? studioAssets.map(a => a.id === asset.id ? asset : a) : [asset, ...studioAssets];
+            setStudioAssets(newAssets);
+            saveStudioAssets(newAssets);
+        },
+        onAddAssetLog: (assetId: string, log: Omit<AssetLog, 'timestamp'>) => { addAssetLog(assetId, log); setStudioAssets(getStudioAssets()); },
 
-const App: React.FC = () => {
-  return (
-    <ToastProvider>
-      <AppContent />
-    </ToastProvider>
-  );
+        // Vouchers
+        onAddVoucher: (voucherData: Omit<Voucher, 'id' | 'userId' | 'createdAt' | 'status'>) => { addVoucherToStore(voucherData); setVouchers(getVouchers()); }
+
+    };
+
+    const renderPage = () => {
+        switch (pageState.page) {
+            case 'home': return <HomePage {...allProps} />;
+            case 'service': return <ServicePage serviceId={pageState.serviceId} {...allProps} />;
+            case 'product': return <ProductPage productId={pageState.productId} serviceId={pageState.serviceId} {...allProps} />;
+            case 'main_products': return <MainProductsPage {...allProps} />;
+            case 'login': return <LoginPage onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} onFaceLogin={(user) => {setCurrentUser(user); navigateTo({page: 'home'});}} users={users} navigateTo={navigateTo} />;
+            case 'register': return <RegisterPage onRegister={handleRegister} onGoogleLogin={handleGoogleLogin} navigateTo={navigateTo} />;
+            case 'pricing': return <PricingPage onPurchaseRequest={handlePurchaseRequest} {...allProps} />;
+            case 'blog': return <BlogPage {...allProps} />;
+            case 'blog_post': return <BlogPostPage postId={pageState.postId} {...allProps} />;
+            case 'promotions': return <PromotionsPage {...allProps} />;
+            case 'search_results': return <SearchResultsPage query={pageState.query} {...allProps} />;
+            case 'cart': return <CartPage cart={cart} onUpdateQuantity={handleUpdateCartQuantity} onRemove={handleRemoveFromCart} {...allProps} />;
+            case 'my_account': return <MyAccountPage 
+                onRedeemReward={(rewardId: string) => ({success: false, message: 'Tính năng đang phát triển'})}
+                onUpdatePassword={(oldP:string, newP:string) => ({success:false, message:'Tính năng đang phát triển'})}
+                onUpdateUser={(updates: Partial<User>) => handleUpdateUser(currentUser!.id, updates)}
+                {...allProps} 
+            />;
+            case 'user_management': return <UserManagementPage 
+                onConfirmPayment={()=>{}}
+                onRejectPayment={()=>{}}
+                {...allProps} 
+             />;
+            case 'pricing_management': return <PricingManagementPage {...allProps} />;
+            case 'product_management': return <ProductManagementPage {...allProps} />;
+            case 'plan_management': return <PlanManagementPage onUpdatePlans={handleUpdatePlans} {...allProps} />;
+            case 'catalog_management': return <CatalogManagementPage {...allProps} />;
+            case 'lab_operation': return currentUser ? <LabOperationPage currentUser={currentUser} onRefreshRequests={() => setRequests(getPrintRequests())} onUpdateRequest={(id, updates, action) => { updatePrintRequest(id, updates, currentUser, action); setRequests(getPrintRequests()); }} {...allProps} /> : <LoginPage onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} onFaceLogin={(user)=>{setCurrentUser(user); navigateTo({page:'home'});}} users={users} navigateTo={navigateTo} />;
+            case 'print_queue': return <PrintQueuePage {...allProps} />;
+            case 'time_clock': return currentUser ? <TimeClockPage currentUser={currentUser} onAddTimeClockEntry={(userId, type, photo) => { addTimeClockEntry({userId, type, photoDataUrl: photo, timestamp: Date.now()}); showToast(`Đã chấm công ${type === 'clock_in' ? 'vào' : 'ra'}!`, 'success');}} /> : null;
+            case 'studio_hub': return <StudioManagementHub onSelectManager={(manager) => navigateTo({page: 'wedding_studio_manager'})} />;
+            case 'wedding_studio_manager': return currentUser ? <WeddingStudioManager onBackToHub={() => navigateTo({page: 'user_management'})} {...allProps} currentUser={currentUser} /> : null;
+            case 'debt_report': return <DebtReportPage customerZalo={pageState.customerZalo} allUsers={users} allRequests={requests} />;
+            case 'trace': return <TracePage requestId={pageState.requestId} />;
+            case 'community': return currentUser ? <CommunityPage currentUser={currentUser} users={users} navigateTo={navigateTo} initialSelectedUserId={pageState.selectedUserId} requests={requests} /> : <LoginPage onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} onFaceLogin={(user)=>{setCurrentUser(user); navigateTo({page:'home'});}} users={users} navigateTo={navigateTo} />;
+            case 'schedule': return currentUser ? <SchedulePage currentUser={currentUser} /> : null;
+
+            case 'tool':
+                switch (pageState.toolId) {
+                    case 'idPhoto': return <IdPhotoGenerator {...allProps} />;
+                    case 'photoRestorer': return <PhotoRestorer {...allProps} />;
+                    case 'conceptPhoto': return <ConceptPhotoGenerator {...allProps} />;
+                    case 'familyPhotoComposer': return <FamilyPhotoComposer {...allProps} />;
+                    case 'aiWeddingComposer': return <AiWeddingComposer {...allProps} />;
+                    case 'photoLab': return <PhotoLab {...allProps} />;
+                    case 'socialMediaPostGenerator': return <SocialMediaPostGenerator {...allProps} />;
+                    case 'aiPortraitMaster': return <AiPortraitMaster {...allProps} />;
+                    default: return <Introduction {...allProps} />;
+                }
+            default: return <HomePage {...allProps} />;
+        }
+    };
+
+    return (
+        <div className={theme}>
+            <div className="bg-emerald-50 dark:bg-zinc-950 text-slate-800 dark:text-zinc-200 min-h-screen">
+                {!pageState.page.includes('lab_operation') && !pageState.page.includes('wedding_studio_manager') && <Header
+                    currentUser={currentUser}
+                    handleLogout={handleLogout}
+                    navigateTo={navigateTo}
+                    theme={theme}
+                    toggleTheme={() => { const newTheme = theme === 'light' ? 'dark' : 'light'; setTheme(newTheme); localStorage.setItem('theme', newTheme); }}
+                    isAdmin={isAdminMode}
+                    newPrintRequestsCount={newPrintRequestsCount}
+                    pageState={pageState}
+                    cartItemCount={cart.length}
+                />}
+
+                <Suspense fallback={<div className="flex justify-center items-center py-40"><Loader /></div>}>
+                    {renderPage()}
+                </Suspense>
+
+                {pageState.page === 'print_order_modal' && (
+                    <PrintOrderPage
+                        imageUrl={pageState.imageUrl}
+                        sourceTool={pageState.sourceTool}
+                        currentUser={currentUser}
+                        onClose={() => navigateTo({ page: pageState.fromPage || 'tool', toolId: pageState.fromToolId || 'idPhoto' })}
+                        onSubmit={(orderDetails) => {
+                            if (!currentUser) return;
+                            addPrintRequest({
+                                imageUrl: pageState.imageUrl,
+                                sourceTool: pageState.sourceTool,
+                                userId: currentUser.id,
+                                username: currentUser.username,
+                                orderDetails
+                            });
+                            setRequests(getPrintRequests());
+                            navigateTo({ page: 'home' });
+                            showToast('Đã gửi yêu cầu in thành công!', 'success');
+                        }}
+                    />
+                )}
+                
+                {isMockPayment && showPaymentModal && <MockPaymentPage planId={showPaymentModal} onClose={() => setIsMockPayment(false)} onPaymentSuccess={(planId) => { setIsMockPayment(false); setShowPaymentModal(null); }} />}
+                {showPaymentModal && !isMockPayment && <PaymentModal planId={showPaymentModal} onClose={() => setShowPaymentModal(null)} onBillSubmit={handleBillSubmit} onVerifiedDownload={()=>{}} bankAccounts={bankAccounts} plans={plans} />}
+                
+                {!pageState.page.includes('lab_operation') && !pageState.page.includes('wedding_studio_manager') && <Footer />}
+                
+                {!isChatbotOpen && !pageState.page.includes('lab_operation') && (
+                    <button onClick={() => setIsChatbotOpen(true)} className="fixed bottom-4 right-4 z-[99] w-14 h-14 bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-purple-700">
+                        <AiAssistantIcon className="w-7 h-7" />
+                    </button>
+                )}
+                
+                {isChatbotOpen && <AiChatbot onClose={() => setIsChatbotOpen(false)} isInitialLogin={isInitialLogin} currentUser={currentUser} />}
+                
+                <ContactFAB />
+                <ToastContainer />
+            </div>
+        </div>
+    );
 };
+
+const App: React.FC = () => (
+    <ToastProvider>
+        <AppContent />
+    </ToastProvider>
+);
 
 export default App;

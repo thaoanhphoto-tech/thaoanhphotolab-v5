@@ -1,4 +1,5 @@
 
+
 export interface Background {
   id: string;
   name: string;
@@ -86,3 +87,12 @@ export interface GeneratedPhoto {
 }
 
 export type Theme = 'light' | 'dark';
+
+// FIX: Add RetouchSettings interface here to be shared across components and services.
+export interface RetouchSettings {
+    skinSmoothing: 'none' | 'gentle' | 'professional';
+    blemishRemoval: boolean;
+    teethWhitening: boolean;
+    eyeEnlargement: number; // 0-100
+    faceSlimming: number; // 0-100
+}

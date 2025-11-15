@@ -24,7 +24,7 @@ export const OptionSelector = <T extends Option>(
             key={option.id}
             onClick={() => onSelect(option)}
             disabled={disabled}
-            className={`relative p-3 border rounded-lg text-left transition-all duration-200 w-full h-full ${
+            className={`relative p-3 border rounded-lg text-left transition-all duration-200 w-full h-full flex-1 min-w-[120px] ${
               selectedOption.id === option.id
                 ? 'border-blue-600 dark:border-blue-500 ring-2 ring-blue-200 dark:ring-blue-500/30 bg-blue-50 dark:bg-blue-900/20'
                 : option.isRecommended

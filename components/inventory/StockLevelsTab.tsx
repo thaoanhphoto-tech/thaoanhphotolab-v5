@@ -1,5 +1,10 @@
 
 
+
+
+
+
+
 import React, { useState } from 'react';
 import { Material, Warehouse } from '../../inventoryStore';
 import { MaterialModal } from './MaterialModal';
@@ -73,7 +78,7 @@ const StockLevelsTab: React.FC<StockLevelsTabProps> = ({ materials, onUpdateMate
                     </thead>
                     <tbody>
                         {materials.map(mat => {
-                            // Fix: Explicitly cast `val` to Number to avoid TypeScript error with `+` operator.
+                            // FIX: Operator '+' cannot be applied to types 'unknown' and 'number'. Cast value to Number.
                             const totalStock = Object.values(mat.stock || {}).reduce((sum, val) => sum + Number(val), 0);
                             const isExpanded = expandedRowId === mat.id;
                             return (
@@ -94,29 +99,25 @@ const StockLevelsTab: React.FC<StockLevelsTabProps> = ({ materials, onUpdateMate
                                         <tr className="bg-slate-50 dark:bg-zinc-700/30">
                                             <td colSpan={5} className="p-3">
                                                 <h4 className="text-xs font-bold mb-1">Chi tiết tồn kho:</h4>
-                                                <ul className="text-xs space-y-1 pl-4">
-                                                    {warehouses.map(wh => (
-                                                        <li key={wh.id} className="flex justify-between">
-                                                            <span>{wh.name}:</span>
-                                                            <span className="font-semibold">{mat.stock[wh.id] || 0} {mat.unit}</span>
-                                                        </li>
+                                                <ul className="text-xs list-disc list-inside pl-4">
+                                                    {warehouses.map(w => (
+                                                        <li key={w.id}>{w.name}: <span className="font-semibold">{mat.stock[w.id] || 0} {mat.unit}</span></li>
                                                     ))}
                                                 </ul>
                                             </td>
                                         </tr>
                                     )}
                                 </React.Fragment>
-                            )
+                            );
                         })}
                     </tbody>
                 </table>
-                 {materials.length === 0 && <p className="text-center text-slate-500 py-8">Chưa có vật tư nào. Hãy thêm vật tư mới để bắt đầu.</p>}
             </div>
             {isModalOpen && (
-                <MaterialModal 
-                    material={editingMaterial} 
-                    onClose={handleCloseModal} 
-                    onSave={handleSave} 
+                <MaterialModal
+                    material={editingMaterial}
+                    onClose={handleCloseModal}
+                    onSave={handleSave}
                     sizes={sizes}
                 />
             )}

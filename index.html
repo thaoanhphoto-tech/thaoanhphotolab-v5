@@ -13,51 +13,19 @@
     <script>
       tailwind.config = {
         darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              'xanh-lam-1': '#1e8ed6',
+            }
+          }
+        }
       }
     </script>
     <style>
       body {
         font-family: 'Inter', sans-serif;
       }
-      .tooltip-container {
-        position: relative;
-        cursor: help;
-        border-bottom: 1px dotted #94a3b8; /* slate-400 */
-      }
-      .tooltip-container::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        bottom: 125%; /* Position above the element */
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: #1e293b; /* slate-800 */
-        color: #fff;
-        padding: 6px 10px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 500;
-        line-height: 1.4;
-        white-space: nowrap;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
-        pointer-events: none;
-        z-index: 50; /* Ensure it's above other elements */
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-      }
-      .tooltip-container:hover::after {
-        opacity: 1;
-        visibility: visible;
-      }
-      html.dark .tooltip-container {
-        border-bottom: 1px dotted #64748b; /* slate-500 */
-      }
-      html.dark .tooltip-container::after {
-        background-color: #f8fafc; /* slate-50 */
-        color: #1e293b; /* slate-800 */
-        border: 1px solid #e2e8f0; /* slate-200 */
-      }
-
       /* Toast Animations */
       @keyframes toast-in {
         from {
@@ -85,116 +53,46 @@
       .toast-exit {
         animation: toast-out 0.3s ease-in forwards;
       }
-
-      /* Animated Gradient Text */
-      .animated-gradient-text {
-        background: linear-gradient(to right, #ef4444, #f97316, #eab308, #84cc16, #22c55e, #14b8a6, #06b6d4, #3b82f6, #8b5cf6, #d946ef, #ef4444);
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-        background-size: 200% auto;
-        animation: gradient-scroll 4s linear infinite;
-      }
-
-      @keyframes gradient-scroll {
-        to {
-          background-position: -200% center;
-        }
-      }
-
-      /* Marquee Animation */
-      @keyframes marquee-scroll {
-        from { transform: translateX(100%); }
-        to { transform: translateX(-100%); }
-      }
-      .marquee-text-animation {
-        display: inline-block;
-        animation: marquee-scroll 25s linear infinite;
-      }
-
-      /* Subtle Zoom Animation for Hero Background */
-      @keyframes subtle-zoom {
-        0%, 100% {
-          transform: scale(1);
-        }
-        50% {
-          transform: scale(1.05);
-        }
-      }
-      .animate-subtle-zoom {
-        animation: subtle-zoom 40s ease-in-out infinite;
-      }
-
-      /* Blink animation */
-      @keyframes blink {
-        50% { opacity: 0.2; }
+       @keyframes blink {
+        50% { opacity: 0.5; }
       }
       .animate-blink {
         animation: blink 1.5s linear infinite;
       }
-
-      /* Blinking background for admin tab */
-      @keyframes blink-bg {
-        50% { 
-          background-color: #ef4444; /* red-500 */
-          color: #ffffff;
-        }
-      }
-      .animate-blink-bg {
-        animation: blink-bg 1s steps(1) infinite;
-      }
-      
-      /* Jump animation */
-      @keyframes jump {
-        0%, 100% {
-          transform: translateY(0);
-        }
-        50% {
-          transform: translateY(-5px);
-        }
+       @keyframes jump {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
       }
       .animate-jump {
-        animation: jump 1.5s ease-in-out infinite;
+        animation: jump 1s ease-in-out infinite;
       }
-
-      /* Subtle Bobbing animation for FABs */
-      @keyframes subtle-bob {
-        0%, 100% {
-          transform: translateY(0);
-        }
-        50% {
-          transform: translateY(-4px);
-        }
+      @keyframes subtle-zoom {
+          0% { transform: scale(1); }
+          100% { transform: scale(1.05); }
+      }
+      .animate-subtle-zoom {
+          animation: subtle-zoom 15s ease-in-out infinite alternate;
+      }
+       @keyframes subtle-bob {
+        0% { transform: translateY(0); }
+        50% { transform: translateY(-3px); }
+        100% { transform: translateY(0); }
       }
       .animate-subtle-bob {
-          animation: subtle-bob 1.8s ease-in-out infinite;
+          animation: subtle-bob 2s ease-in-out infinite;
       }
-
-      /* Slow Pulse animation for tool cards */
-      @keyframes slow-pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
+       .animated-gradient-text {
+          background: linear-gradient(90deg, #10b981, #3b82f6, #8b5cf6, #ec4899);
+          background-size: 200% 200%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          animation: gradient-animation 5s ease infinite;
       }
-      .animate-slow-pulse {
-        animation: slow-pulse 3s ease-in-out infinite;
-      }
-
-
-      /* Kanban Card Blink */
-      @keyframes blink-border-yellow {
-        50% { border-color: #f59e0b; } /* amber-500 */
-      }
-      .animate-blink-border-yellow {
-        animation: blink-border-yellow 1.5s steps(1) infinite;
-        border-width: 2px;
-        border-style: solid;
-      }
-
-      @keyframes blink-green-dot {
-        50% { opacity: 0.3; }
-      }
-      .animate-blink-green-dot {
-        animation: blink-green-dot 1.2s linear infinite;
+      @keyframes gradient-animation {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
       }
     </style>
   <script type="importmap">
